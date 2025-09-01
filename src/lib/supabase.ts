@@ -1,36 +1,14 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
+import type { Database } from '@/lib/supabase'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
-}
-
-// Create client with real-time enabled and legacy compatibility
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 2,
-    }
-  },
-  global: {
-    headers: {
-      'X-Client-Info': '@supabase/supabase-js',
-    }
-  },
-  db: {
-    schema: 'public'
-  }
-})
+// Create a single supabase client for client-side use
+export const supabase = createBrowserClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 // Database types (based on your existing schema)
-export interface Database {
+interface Database {
   public: {
     Tables: {
       profiles: {
@@ -144,18 +122,80 @@ export interface Database {
           created_at?: string
         }
       }
+      profile_buy_transactions: {
+        Row: {
+          id: string
+          user_id: string
+          gateway_transaction_id: string
+          credits_purchased: number
+          amount_cents: number
+          gateway_payload: Record<string, any> | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          gateway_transaction_id: string
+          credits_purchased: number
+          amount_cents: number
+          gateway_payload?: Record<string, any> | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          gateway_transaction_id?: string
+          credits_purchased?: number
+          amount_cents?: number
+          gateway_payload?: Record<string, any> | null
+          created_at?: string
+        }
+      }
+      credit_transactions: {
+        Row: {
+          id: string
+          user_id: string
+          amount: number
+          transaction_type: 'purchase' | 'usage'
+          description: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          amount: number
+          transaction_type: 'purchase' | 'usage'
+          description: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          amount?: number
+          transaction_type?: 'purchase' | 'usage'
+          description?: string
+          created_at?: string
+        }
+      }
     }
-    Views: {
-      [_ in never]: never
-    }
+    Views: Record<string, never>
     Functions: {
-      [_ in never]: never
+      finalize_dynamic_paypal_purchase: {
+        Args: {
+          user_id_input: string
+          credits_to_add: number
+          amount_cents_input: number
+          gateway_id_input: string
+          gateway_payload: Record<string, unknown>
+        }
+        Returns: undefined
+      }
     }
-    Enums: {
-      [_ in never]: never
-    }
+    Enums: Record<string, never>
   }
 }
 
 // Typed Supabase client
-export type TypedSupabaseClient = ReturnType<typeof createClient<Database>>
+type TypedSupabaseClient = ReturnType<typeof createBrowserClient<Database>>
+
+export type { Database, TypedSupabaseClient }

@@ -129,6 +129,35 @@ export const creditService = {
     return { success: true, profile: data, error: null }
   },
 
+  // Get purchase history for a user
+  async getPurchaseHistory(userId: string, limit = 10) {
+    const { data, error } = await supabase
+      .from('profile_buy_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    
+    if (error) return { transactions: null, error }
+    
+    return { transactions: data, error: null }
+  },
+
+  // Get credit transaction history
+  async getCreditTransactions(userId: string, limit = 20) {
+    const { data, error } = await supabase
+      .from('credit_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    
+    if (error) return { transactions: null, error }
+    
+    return { transactions: data, error: null }
+  },
+
   // Use credits (deduct from balance)
   async useCredits(userId: string, creditsToUse: number) {
     // Get current credits

@@ -11,7 +11,8 @@ import {
   Settings, 
   User, 
   CreditCard,
-  Tag
+  Tag,
+  Receipt
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -40,6 +41,16 @@ const sidebarItems = [
     icon: Tag
   },
   {
+    name: 'Transactions',
+    href: '/dashboard/transactions',
+    icon: Receipt
+  },
+  {
+    name: 'Billing',
+    href: '/dashboard/billing',
+    icon: CreditCard
+  },
+  {
     name: 'Settings',
     href: '/dashboard/settings',
     icon: Settings
@@ -48,11 +59,6 @@ const sidebarItems = [
     name: 'Profile',
     href: '/dashboard/profile',
     icon: User
-  },
-  {
-    name: 'Billing',
-    href: '/dashboard/billing',
-    icon: CreditCard
   }
 ]
 

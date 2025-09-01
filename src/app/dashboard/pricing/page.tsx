@@ -1,14 +1,16 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
-import { Check } from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
 import { useSupabase } from '@/lib/supabase-provider'
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 // Features list directly from PricingSection component
 const features = [
@@ -21,10 +23,13 @@ const features = [
 ]
 
 export default function PricingPage() {
+  const router = useRouter()
   const [credits, setCredits] = useState<number[]>([1000]) // Start with minimum 1000 credits as array
   const [isLoading, setIsLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [inputValue, setInputValue] = useState('1,000') // Track input value separately
+  const [showPayPal, setShowPayPal] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const { user, purchaseCredits } = useSupabase()
   
   // Only render interactive elements after client-side hydration
@@ -102,20 +107,17 @@ export default function PricingPage() {
     }
   }
   
+  // Handler for initiating PayPal checkout
   const handlePurchase = async () => {
     if (!user) {
+      // Redirect to sign-in page if user is not authenticated
+      router.push('/signin?redirect=/dashboard/pricing')
       return
     }
     
     setIsLoading(true)
-    const { success, error } = await purchaseCredits(currentCredits, parseFloat(totalPrice))
-    
-    if (success) {
-      alert(`Successfully purchased ${currentCredits.toLocaleString()} credits!`)
-    } else {
-      alert('Purchase failed: ' + (error?.message || 'Unknown error'))
-    }
-    
+    setError(null)
+    setShowPayPal(true)
     setIsLoading(false)
   }
   
@@ -128,6 +130,77 @@ export default function PricingPage() {
     }
     return num.toString()
   }
+
+  // Handle PayPal order creation
+  const createOrder = async () => {
+    try {
+      console.log("Starting PayPal order creation...");
+      
+      // Check if user is authenticated before proceeding
+      if (!user) {
+        throw new Error('User not authenticated. Please sign in first.');
+      }
+      
+      const response = await fetch('/api/checkout/paypal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ creditsToPurchase: currentCredits }),
+        credentials: 'include' // Ensure cookies are sent with the request
+      });
+
+      console.log("API response status:", response.status);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error("API error details:", data);
+        throw new Error(data.error || 'Failed to create order');
+      }
+
+      console.log("Order created successfully:", data);
+      return data.orderId;
+    } catch (err) {
+      console.error('Detailed error creating PayPal order:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create order');
+      throw err;
+    }
+  };
+
+  // Handle PayPal order approval
+  const onApprove = async (data: { orderID: string }) => {
+    setIsLoading(true);
+    try {
+      // The payment is completed on the server via webhook
+      // Here we just show a success message and refresh credits
+      alert(`Purchase successful! You will receive ${currentCredits.toLocaleString()} credits shortly.`);
+      await purchaseCredits(0, 0); // Just to trigger a credits refresh
+      setShowPayPal(false);
+    } catch (err) {
+      console.error('Error finalizing PayPal order:', err);
+      setError(err instanceof Error ? err.message : 'Failed to finalize payment');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle PayPal errors
+  const onError = (err: Record<string, unknown>) => {
+    console.error('PayPal error:', err);
+    // Check if it's an authentication error
+    if (err.message && typeof err.message === 'string' && err.message.includes('Unauthorized')) {
+      setError('Please sign in to your account before purchasing credits.');
+    } else {
+      setError('PayPal payment failed. Please try again. Error: ' + (err.message || 'Unknown error'));
+    }
+    setShowPayPal(false);
+  };
+
+  // Handle PayPal cancel
+  const onCancel = () => {
+    console.log('Payment cancelled');
+    setShowPayPal(false);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -156,7 +229,7 @@ export default function PricingPage() {
                 <Card className="relative border-border ring-2 ring-foreground">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
                     {/* Left Side - Price Display */}
-                    <div className="lg:border-r border-border">
+                    <div className="lg:border-r border-border bg-background">
                       <div className="text-left px-8 py-10">
                         <h3 className="text-xl font-medium text-foreground mb-8">
                           Credit Calculator
@@ -175,7 +248,7 @@ export default function PricingPage() {
                     </div>
                     
                     {/* Right Side - Slider and Features */}
-                    <div className="px-8 py-10">
+                    <div className="px-8 py-10 bg-background">
                       {/* Min/Max labels */}
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-sm text-foreground/70">1K</span>
@@ -199,15 +272,19 @@ export default function PricingPage() {
                       {/* Credit Input */}
                       <div className="mb-2">
                         <div className="relative w-full">
-                          <Input
-                            type="text"
-                            value={inputValue}
-                            onChange={handleInputChange}
-                            onBlur={handleInputBlur}
-                            onKeyDown={handleKeyDown}
-                            aria-label="Credit amount"
-                            className="w-full text-left font-medium h-12 pl-4 pr-16 text-lg"
-                          />
+                          {mounted ? (
+                            <Input
+                              type="text"
+                              value={inputValue}
+                              onChange={handleInputChange}
+                              onBlur={handleInputBlur}
+                              onKeyDown={handleKeyDown}
+                              aria-label="Credit amount"
+                              className="w-full text-left font-medium h-12 pl-4 pr-16 text-lg"
+                            />
+                          ) : (
+                            <div className="w-full h-12 bg-muted rounded-md mb-4"></div>
+                          )}
                           <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
                             credits
                           </div>
@@ -219,19 +296,63 @@ export default function PricingPage() {
                         Use ↑/↓ keys to adjust by 1,000 credits
                       </div>
                       
-                      {/* Button */}
-                      {mounted ? (
-                        <Button 
-                          className="w-full mb-6 h-12 bg-foreground text-background hover:bg-foreground/90 border border-border text-base font-medium"
-                          onClick={handlePurchase}
-                          disabled={isLoading}
-                        >
-                          {isLoading ? 'Processing...' : `Get ${formatCredits(currentCredits)} Credits`}
-                        </Button>
-                      ) : (
-                        <div className="w-full h-12 bg-muted rounded-md mb-6"></div>
+                      {/* Error Display */}
+                      {error && (
+                        <div className="mb-4 p-3 text-sm bg-red-50 border border-red-200 text-red-800 rounded-md">
+                          {error}
+                        </div>
                       )}
                       
+                      {/* PayPal Button or Purchase Button */}
+                      {mounted && (
+                        showPayPal ? (
+                          <div className="mb-6">
+                            <PayPalScriptProvider options={{ 
+                              clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',
+                              currency: "USD",
+                              intent: "capture"
+                            }}>
+                              <PayPalButtons
+                                style={{ layout: "vertical" }}
+                                disabled={isLoading}
+                                forceReRender={[currentCredits, totalPrice]}
+                                createOrder={createOrder}
+                                onApprove={onApprove}
+                                onError={(err) => {
+                                  console.error('PayPal Buttons error:', err);
+                                  setError('PayPal payment failed. Please try again. Error: ' + (err.message || 'Unknown error'));
+                                  setShowPayPal(false);
+                                }}
+                                onCancel={onCancel}
+                              />
+                            </PayPalScriptProvider>
+                            <button 
+                              onClick={() => setShowPayPal(false)} 
+                              className="w-full mt-2 py-2 text-sm text-center text-gray-600 hover:underline"
+                            >
+                              Cancel and go back
+                            </button>
+                          </div>
+                        ) : (
+                          <Button 
+                            className="w-full mb-6 h-12 bg-foreground text-background hover:bg-foreground/90 border border-border text-base font-medium"
+                            onClick={handlePurchase}
+                            disabled={isLoading}
+                          >
+                            {isLoading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Processing...
+                              </>
+                            ) : user ? (
+                              `Get ${formatCredits(currentCredits)} Credits`
+                            ) : (
+                              "Sign in to purchase credits"
+                            )}
+                          </Button>
+                        )
+                      )}
+
                       {/* Features */}
                       <div className="space-y-3">
                         {features.map((feature, index) => (

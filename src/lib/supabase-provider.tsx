@@ -3,17 +3,10 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import { supabase } from '@/lib/supabase'
 import { userService, creditService } from '@/lib/supabase-services'
-import { User } from '@supabase/supabase-js'
+import { type User } from '@supabase/supabase-js'
+import type { Database } from '@/lib/supabase'
 
-interface Profile {
-  id: string
-  email: string
-  display_name: string | null
-  credits: number
-  created_at: string
-  updated_at: string
-  notification_settings: Record<string, any>
-}
+type Profile = Database['public']['Tables']['profiles']['Row']
 
 interface UserCredits {
   total: number
