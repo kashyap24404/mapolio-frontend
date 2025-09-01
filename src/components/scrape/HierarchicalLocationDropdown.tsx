@@ -12,12 +12,20 @@ import { LocationNodeComponent } from './location/LocationNode'
 import { LocationSearchControls } from './location/LocationSearchControls'
 import { BulkSelectionControls } from './location/BulkSelectionControls'
 
+interface ExtendedLocationDropdownProps extends LocationDropdownProps {
+  disabled?: boolean // Add disabled prop
+}
+
 export default function HierarchicalLocationDropdown({
   locationData,
   selectedPaths,
   onLocationChange,
-  loadingLocationData
-}: LocationDropdownProps) {
+  loadingLocationData,
+  disabled = false // Add disabled prop
+}: ExtendedLocationDropdownProps) {
+  const [isClient, setIsClient] = useState(false)
+
+  // Declare all hooks at the top level to ensure consistent order
   const [isOpen, setIsOpen] = useState(false)
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set())
@@ -45,6 +53,39 @@ export default function HierarchicalLocationDropdown({
   
   // Search functionality
   const { searchTerm, setSearchTerm, filteredTree, autoExpandedNodes } = useLocationSearch(locationTree)
+
+  // Calculate total selected ZIP codes
+  const totalSelectedZipCodes = useMemo(() => {
+    if (!locationData?.data) return 0
+    
+    return selectedPaths.reduce((total, path) => {
+      const [state, county, city, zipCode] = path
+      
+      if (path.length === 1) {
+        // Entire state selected
+        const stateData = locationData.data[state]
+        if (!stateData) return total
+        return total + (Object.values(stateData.counties as any) as any[]).reduce((stateTotal: number, countyData: any) => 
+          stateTotal + (Object.values(countyData.cities as any) as string[][]).reduce((countyTotal: number, zipCodes: string[]) => 
+            countyTotal + zipCodes.length, 0), 0)
+      } else if (path.length === 2) {
+        // Entire county selected
+        const countyData = locationData.data[state]?.counties[county]
+        if (!countyData) return total
+        return total + (Object.values((countyData as any).cities) as string[][]).reduce((countyTotal: number, zipCodes: string[]) => 
+          countyTotal + zipCodes.length, 0)
+      } else if (path.length === 3) {
+        // Entire city selected
+        const zipCodes = locationData.data[state]?.counties[county]?.cities[city]
+        return total + (zipCodes?.length || 0)
+      } else if (path.length === 4) {
+        // Individual zip code selected
+        return total + 1
+      }
+      
+      return total
+    }, 0)
+  }, [selectedPaths, locationData])
 
   // Enhanced bulk selection with chunked processing for large operations
   const handleBulkSelection = useCallback(async (type: BulkSelectionType) => {
@@ -111,6 +152,10 @@ export default function HierarchicalLocationDropdown({
     }
   }, [getAllPathsAtLevel, onLocationChange])
 
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
   // Update tree when location data changes
   useEffect(() => {
     setLocationTree(buildLocationTree())
@@ -158,9 +203,15 @@ export default function HierarchicalLocationDropdown({
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    // Only attach the event listener when isClient is true
+    if (isClient) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+    
+    // Return a cleanup function even when not attaching listener
+    return () => {}
+  }, [isClient])
 
   // Handle expanding nodes with lazy loading
   const toggleNode = useCallback(async (nodeId: string, node: LocationNode) => {
@@ -193,6 +244,23 @@ export default function HierarchicalLocationDropdown({
     setExpandedNodes(newExpanded)
   }, [expandedNodes, loadNodeChildren, updateNodeInTree])
 
+  const getDisplayText = () => {
+    if (selectedPaths.length === 0) return "Select locations"
+    if (selectedPaths.length === 1) {
+      const path = selectedPaths[0]
+      if (path.length === 1) {
+        return `${path[0].charAt(0).toUpperCase() + path[0].slice(1)} (entire state)`
+      } else if (path.length === 2) {
+        return `${path[1]}, ${path[0].charAt(0).toUpperCase() + path[0].slice(1)} (entire county)`
+      } else if (path.length === 3) {
+        return `${path[2]}, ${path[1]}, ${path[0].charAt(0).toUpperCase() + path[0].slice(1)}`
+      } else if (path.length === 4) {
+        return `${path[3]}, ${path[2]}, ${path[1]}, ${path[0].charAt(0).toUpperCase() + path[0].slice(1)}`
+      }
+    }
+    return `${selectedPaths.length} locations selected`
+  }
+
   // Render individual location node
   const renderLocationNode = (node: LocationNode): React.JSX.Element => {
     const isExpanded = expandedNodes.has(node.id)
@@ -211,124 +279,89 @@ export default function HierarchicalLocationDropdown({
         expandedNodes={expandedNodes}
         loadingNodes={loadingNodes}
         getSelectionState={getNodeSelectionState}
+        disabled={disabled} // Pass disabled prop to child component
       />
     )
   }
 
-  const getDisplayText = () => {
-    if (selectedPaths.length === 0) return "Select locations"
-    if (selectedPaths.length === 1) {
-      const path = selectedPaths[0]
-      if (path.length === 1) {
-        return `${path[0].charAt(0).toUpperCase() + path[0].slice(1)} (entire state)`
-      } else if (path.length === 2) {
-        return `${path[1]}, ${path[0].charAt(0).toUpperCase() + path[0].slice(1)} (entire county)`
-      } else if (path.length === 3) {
-        return `${path[2]}, ${path[1]}, ${path[0].charAt(0).toUpperCase() + path[0].slice(1)}`
-      } else if (path.length === 4) {
-        return `${path[3]}, ${path[2]}, ${path[1]}, ${path[0].charAt(0).toUpperCase() + path[0].slice(1)}`
-      }
+  // Render the component content
+  const renderContent = () => {
+    // Don't render actual content on server to prevent hydration mismatches
+    if (!isClient) {
+      return (
+        <div className="h-10 bg-muted rounded"></div>
+      )
     }
-    return `${selectedPaths.length} locations selected`
+
+    return (
+      <div className="relative" ref={dropdownRef}>
+        {/* Trigger Button */}
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          disabled={disabled || loadingLocationData || locationTree.length === 0}
+          className={cn(
+            "w-full flex items-center justify-between",
+            "px-3 py-2 text-left text-sm",
+            "border border-input rounded-md",
+            "bg-background hover:bg-muted/50",
+            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+            "transition-colors duration-200"
+          )}
+        >
+          <div className="flex items-center space-x-2">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <span className={selectedPaths.length === 0 ? "text-muted-foreground" : "text-foreground"}>
+              {loadingLocationData ? "Loading locations..." : getDisplayText()}
+            </span>
+            {selectedPaths.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                ({totalSelectedZipCodes} total zips)
+              </span>
+            )}
+          </div>
+          <ChevronDown className={cn(
+            "h-4 w-4 text-muted-foreground transition-transform duration-200",
+            isOpen && "transform rotate-180"
+          )} />
+        </button>
+
+        {/* Dropdown Menu */}
+        {isOpen && (
+          <div className={cn(
+            "absolute top-full left-0 right-0 z-50 mt-1",
+            "bg-popover border border-border rounded-md shadow-lg",
+            "max-h-80 overflow-y-auto"
+          )}>
+            {locationTree.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-muted-foreground">
+                No locations available
+              </div>
+            ) : (
+              <div className="py-1">
+                <BulkSelectionControls
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  selectedCount={selectedPaths.length}
+                  totalZipCodes={totalSelectedZipCodes}
+                  estimatedCounts={estimatedCounts}
+                  onBulkSelection={handleBulkSelection}
+                  isProcessing={isProcessingBulk}
+                  processingType={processingType}
+                  progress={processingProgress}
+                  disabled={disabled} // Pass disabled prop to child component
+                />
+                <div className="max-h-60 overflow-y-auto">
+                  {filteredTree.map(node => renderLocationNode(node))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
   }
 
-  const totalSelectedZipCodes = useMemo(() => {
-    if (!locationData?.data) return 0
-    
-    return selectedPaths.reduce((total, path) => {
-      const [state, county, city, zipCode] = path
-      
-      if (path.length === 1) {
-        // Entire state selected
-        const stateData = locationData.data[state]
-        if (!stateData) return total
-        return total + (Object.values(stateData.counties as any) as any[]).reduce((stateTotal: number, countyData: any) => 
-          stateTotal + (Object.values(countyData.cities as any) as string[][]).reduce((countyTotal: number, zipCodes: string[]) => 
-            countyTotal + zipCodes.length, 0), 0)
-      } else if (path.length === 2) {
-        // Entire county selected
-        const countyData = locationData.data[state]?.counties[county]
-        if (!countyData) return total
-        return total + (Object.values((countyData as any).cities) as string[][]).reduce((countyTotal: number, zipCodes: string[]) => 
-          countyTotal + zipCodes.length, 0)
-      } else if (path.length === 3) {
-        // Entire city selected
-        const zipCodes = locationData.data[state]?.counties[county]?.cities[city]
-        return total + (zipCodes?.length || 0)
-      } else if (path.length === 4) {
-        // Individual zip code selected
-        return total + 1
-      }
-      
-      return total
-    }, 0)
-  }, [selectedPaths, locationData])
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      {/* Trigger Button */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        disabled={loadingLocationData || locationTree.length === 0}
-        className={cn(
-          "w-full flex items-center justify-between",
-          "px-3 py-2 text-left text-sm",
-          "border border-input rounded-md",
-          "bg-background hover:bg-muted/50",
-          "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-          "disabled:opacity-50 disabled:cursor-not-allowed",
-          "transition-colors duration-200"
-        )}
-      >
-        <div className="flex items-center space-x-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
-          <span className={selectedPaths.length === 0 ? "text-muted-foreground" : "text-foreground"}>
-            {loadingLocationData ? "Loading locations..." : getDisplayText()}
-          </span>
-          {selectedPaths.length > 0 && (
-            <span className="text-xs text-muted-foreground">
-              ({totalSelectedZipCodes} total zips)
-            </span>
-          )}
-        </div>
-        <ChevronDown className={cn(
-          "h-4 w-4 text-muted-foreground transition-transform duration-200",
-          isOpen && "transform rotate-180"
-        )} />
-      </button>
-
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <div className={cn(
-          "absolute top-full left-0 right-0 z-50 mt-1",
-          "bg-popover border border-border rounded-md shadow-lg",
-          "max-h-80 overflow-y-auto"
-        )}>
-          {locationTree.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
-              No locations available
-            </div>
-          ) : (
-            <div className="py-1">
-              <BulkSelectionControls
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                selectedCount={selectedPaths.length}
-                totalZipCodes={totalSelectedZipCodes}
-                estimatedCounts={estimatedCounts}
-                onBulkSelection={handleBulkSelection}
-                isProcessing={isProcessingBulk}
-                processingType={processingType}
-                progress={processingProgress}
-              />
-              <div className="max-h-60 overflow-y-auto">
-                {filteredTree.map(node => renderLocationNode(node))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
+  return renderContent()
 }

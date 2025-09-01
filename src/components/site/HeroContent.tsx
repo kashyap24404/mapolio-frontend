@@ -1,11 +1,29 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Zap } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const HeroContent: React.FC = () => {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  
+  // Only render buttons after client-side hydration to prevent mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleStartClick = () => {
+    router.push('/signin');
+  };
+
+  const handleDemoClick = () => {
+    // Handle demo view logic here
+    console.log("Demo view requested");
+  };
+
   return (
     <div className="text-center max-w-4xl mx-auto">
       {/* Badge */}
@@ -26,15 +44,34 @@ const HeroContent: React.FC = () => {
         Pay only for what you extract.
       </p>
       
-      {/* CTA Buttons */}
+      {/* CTA Buttons - render only after mounted to prevent hydration mismatch */}
       <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-16">
-        <Button size="lg" className="h-11 px-6">
-          Start extracting
-          <ArrowRight className="h-4 w-4 ml-1.5" />
-        </Button>
-        <Button variant="outline" size="lg" className="h-11 px-6">
-          View demo
-        </Button>
+        {mounted ? (
+          <>
+            <Button 
+              size="lg" 
+              className="h-11 px-6"
+              onClick={handleStartClick}
+            >
+              Start extracting
+              <ArrowRight className="h-4 w-4 ml-1.5" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="h-11 px-6"
+              onClick={handleDemoClick}
+            >
+              View demo
+            </Button>
+          </>
+        ) : (
+          // Placeholder while mounting
+          <>
+            <div className="h-11 w-[160px] bg-muted rounded animate-pulse"></div>
+            <div className="h-11 w-[140px] bg-muted/50 rounded animate-pulse"></div>
+          </>
+        )}
       </div>
 
       {/* Stats */}

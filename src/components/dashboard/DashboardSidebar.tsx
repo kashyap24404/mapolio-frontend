@@ -10,7 +10,8 @@ import {
   FileText, 
   Settings, 
   User, 
-  CreditCard
+  CreditCard,
+  Tag
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -32,6 +33,11 @@ const sidebarItems = [
     name: 'Results',
     href: '/dashboard/results',
     icon: FileText
+  },
+  {
+    name: 'Pricing',
+    href: '/dashboard/pricing',
+    icon: Tag
   },
   {
     name: 'Settings',

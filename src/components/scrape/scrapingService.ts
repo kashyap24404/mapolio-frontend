@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { LocationRules } from './location/generateConfigPayload'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 interface Task {
   id: string
@@ -26,11 +27,11 @@ interface ScrapingConfig {
   location_rules: LocationRules
   data_fields: string[]
   rating_filter: string
-  total_selected_zip_codes?: number
   advanced_options?: {
     extract_single_image?: boolean
     max_reviews?: number
   }
+  total_selected_zip_codes?: number
 }
 
 // Get backend API URL from environment or default to localhost
@@ -199,6 +200,9 @@ export const useScrapingTask = (taskId: string | null) => {
   const [task, setTask] = useState<Task | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Use useRef to store the channel instance for Singleton pattern
+  const channelRef = useRef<RealtimeChannel | null>(null)
 
   useEffect(() => {
     if (!taskId) {
@@ -231,55 +235,81 @@ export const useScrapingTask = (taskId: string | null) => {
 
     fetchTask()
 
+    // --- The Singleton Guard ---
+    // If the channelRef already has a channel, it means the subscription is already active
+    // or is in the process of being set up. Do not create a new one.
+    if (channelRef.current) {
+      return
+    }
+
     // Set up real-time subscription for task updates
-    const subscription = supabase
-      .channel(`task-${taskId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'scraper_task',
-          filter: `id=eq.${taskId}`
-        },
-        (payload) => {
-          console.log('Real-time task update received:', payload)
-          
-          if (payload.new) {
-            const updatedTask: Task = {
-              id: payload.new.id,
-              status: payload.new.status,
-              created_at: payload.new.created_at,
-              progress: payload.new.progress,
-              total_results: payload.new.total_results,
-              credits_used: payload.new.credits_used,
-              error_message: payload.new.error_message,
-              config: payload.new.config,
-              message: payload.new.status === 'running' ? `Processing... ${payload.new.progress || 0}%` :
-                      payload.new.status === 'completed' ? `Found ${payload.new.total_results || 0} results` :
-                      payload.new.status === 'failed' ? (payload.new.error_message || 'Task failed') : 'Unknown status'
-            }
+    try {
+      // --- Channel Creation ---
+      // Create the channel and store it in the ref immediately.
+      channelRef.current = supabase.channel(`task-${taskId}`)
+      
+      // --- Subscription Logic ---
+      // Set up all the event listeners on the channel stored in the ref.
+      channelRef.current
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'scraper_task',
+            filter: `id=eq.${taskId}`
+          },
+          (payload) => {
+            console.log('Real-time task update received:', payload)
             
-            setTask(updatedTask)
-            
-            // If task is completed or failed, we can stop loading state
-            if (payload.new.status === 'completed' || payload.new.status === 'failed') {
-              setLoading(false)
+            if (payload.new) {
+              const updatedTask: Task = {
+                id: payload.new.id,
+                status: payload.new.status,
+                created_at: payload.new.created_at,
+                progress: payload.new.progress,
+                total_results: payload.new.total_results,
+                credits_used: payload.new.credits_used,
+                error_message: payload.new.error_message,
+                config: payload.new.config,
+                result_json_url: payload.new.result_json_url,
+                result_csv_url: payload.new.result_csv_url,
+                message: payload.new.status === 'running' ? `Processing... ${payload.new.progress || 0}%` :
+                        payload.new.status === 'completed' ? `Found ${payload.new.total_results || 0} results` :
+                        payload.new.status === 'failed' ? (payload.new.error_message || 'Task failed') : 'Unknown status'
+              }
+              
+              setTask(updatedTask)
+              
+              // If task is completed or failed, we can stop loading state
+              if (payload.new.status === 'completed' || payload.new.status === 'failed') {
+                setLoading(false)
+              }
             }
           }
-        }
-      )
-      .subscribe((status) => {
-        console.log('Subscription status:', status)
-        if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to task updates')
-        }
-      })
+        )
+        .subscribe((status) => {
+          console.log('Subscription status:', status)
+          if (status === 'SUBSCRIBED') {
+            console.log('Successfully subscribed to task updates')
+          }
+        })
+    } catch (error) {
+      console.error('Error setting up real-time subscription:', error)
+    }
 
     // Cleanup subscription on unmount or taskId change
     return () => {
       console.log('Cleaning up subscription for task:', taskId)
-      subscription.unsubscribe()
+      // Clean up subscription properly using the ref
+      if (channelRef.current) {
+        try {
+          supabase.removeChannel(channelRef.current)
+        } catch (error) {
+          console.error('Error unsubscribing from channel:', error)
+        }
+        channelRef.current = null
+      }
     }
   }, [taskId])
 

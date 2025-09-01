@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Container from '@/components/ui/container';
 import Section from '@/components/ui/section';
 import {
@@ -38,6 +38,13 @@ const faqs = [
 ];
 
 const FAQSection: React.FC = () => {
+  const [mounted, setMounted] = useState(false);
+
+  // Wait until after client-side hydration to render interactive elements
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <Section id="faq" className="bg-background border-t border-border" padding="xl">
       <Container size="lg">
@@ -53,27 +60,37 @@ const FAQSection: React.FC = () => {
 
         {/* FAQ Accordion */}
         <div className="max-w-2xl mx-auto">
-          <Accordion type="single" collapsible className="space-y-4">
-            {faqs.map((faq, index) => (
-              <AccordionItem 
-                key={index} 
-                value={`item-${index}`}
-                className="border border-border rounded-lg px-6"
-              >
-                <AccordionTrigger className="text-left font-medium text-foreground hover:text-muted-foreground py-4">
-                  {faq.question}
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-4">
-                  {faq.answer}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+          {mounted ? (
+            <Accordion type="single" collapsible className="space-y-4">
+              {faqs.map((faq, index) => (
+                <AccordionItem 
+                  key={index} 
+                  value={`item-${index}`}
+                  className="border border-border rounded-lg px-6"
+                >
+                  <AccordionTrigger className="text-left font-medium text-foreground hover:text-muted-foreground py-4">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pb-4">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
+            // Placeholder during mounting to prevent hydration mismatch
+            <div className="space-y-4 animate-pulse">
+              {faqs.map((faq, index) => (
+                <div key={index} className="border border-border rounded-lg px-6 py-4">
+                  <div className="h-6 bg-muted rounded w-48 mb-4"></div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Container>
     </Section>
   );
 };
-
 
 export default FAQSection;

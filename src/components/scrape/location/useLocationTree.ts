@@ -12,8 +12,11 @@ export const useLocationTree = (locationData: any) => {
         stateTotal + (Object.values(county.cities) as string[][]).reduce((countyTotal: number, zipCodes: string[]) => 
           countyTotal + zipCodes.length, 0), 0)
 
+      // Generate unique ID for state (state-level)
+      const id = `state-${stateKey}`
+
       return {
-        id: stateKey,
+        id,
         name: stateKey.charAt(0).toUpperCase() + stateKey.slice(1),
         hasChildren: true,
         path: [stateKey],
@@ -40,8 +43,11 @@ export const useLocationTree = (locationData: any) => {
         const totalZipCodes = (Object.values(countyData.cities) as string[][]).reduce((total: number, zipCodes: string[]) => 
           total + zipCodes.length, 0)
 
+        // Generate unique ID for county (state-county)
+        const id = `county-${state}-${countyKey}`
+
         return {
-          id: countyKey,
+          id,
           name: countyKey,
           hasChildren: true,
           path: [state, countyKey],
@@ -56,31 +62,41 @@ export const useLocationTree = (locationData: any) => {
       const countyData = locationData.data[state]?.counties[county]
       if (!countyData) return []
 
-      return (Object.entries(countyData.cities) as [string, string[]][]).map(([cityKey, zipCodes]) => ({
-        id: cityKey,
-        name: cityKey,
-        hasChildren: zipCodes.length > 0, // Always show children for cities with ZIP codes
-        path: [state, county, cityKey],
-        totalZipCodes: zipCodes.length,
-        level: 2,
-        isLoaded: false, // Always lazy load ZIP codes
-        zipCodes,
-        children: []
-      }))
+      return (Object.entries(countyData.cities) as [string, string[]][]).map(([cityKey, zipCodes]) => {
+        // Generate unique ID for city (state-county-city)
+        const id = `city-${state}-${county}-${cityKey}`
+
+        return {
+          id,
+          name: cityKey,
+          hasChildren: zipCodes.length > 0, // Always show children for cities with ZIP codes
+          path: [state, county, cityKey],
+          totalZipCodes: zipCodes.length,
+          level: 2,
+          isLoaded: false, // Always lazy load ZIP codes
+          zipCodes,
+          children: []
+        }
+      })
     } else if (node.level === 2) {
       // Load zip codes for city
       const cityData = locationData.data[state]?.counties[county]?.cities[city]
       if (!cityData) return []
 
-      return cityData.map((zipCode: string) => ({
-        id: zipCode,
-        name: zipCode,
-        hasChildren: false,
-        path: [state, county, city, zipCode],
-        totalZipCodes: 1,
-        level: 3,
-        isLoaded: true
-      }))
+      return cityData.map((zipCode: string) => {
+        // Generate unique ID for ZIP code (state-county-city-zip)
+        const id = `zip-${state}-${county}-${city}-${zipCode}`
+
+        return {
+          id,
+          name: zipCode,
+          hasChildren: false,
+          path: [state, county, city, zipCode],
+          totalZipCodes: 1,
+          level: 3,
+          isLoaded: true
+        }
+      })
     }
 
     return []

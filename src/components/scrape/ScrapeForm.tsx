@@ -39,11 +39,9 @@ interface ScrapeFormProps {
   locationData: LocationData | null
   
   // Loading states
-  loadingCategories: boolean
-  loadingCountries: boolean
-  loadingDataTypes: boolean
-  loadingRatings: boolean
   loadingLocationData: boolean
+  locationError?: string | null
+  isLoading?: boolean // Global loading state from context
 }
 
 export default function ScrapeForm({
@@ -70,11 +68,9 @@ export default function ScrapeForm({
   dataTypes,
   ratings,
   locationData,
-  loadingCategories,
-  loadingCountries,
-  loadingDataTypes,
-  loadingRatings,
-  loadingLocationData
+  loadingLocationData,
+  locationError,
+  isLoading = false
 }: ScrapeFormProps) {
   return (
     <Card>
@@ -92,7 +88,7 @@ export default function ScrapeForm({
           isManualCategory={isManualCategory}
           setIsManualCategory={setIsManualCategory}
           categories={categories}
-          loadingCategories={loadingCategories}
+          disabled={isLoading} // Disable when global data is loading
         />
 
         {/* Location */}
@@ -104,9 +100,10 @@ export default function ScrapeForm({
           selectedLocationPaths={selectedLocationPaths}
           setSelectedLocationPaths={setSelectedLocationPaths}
           countries={countries}
-          loadingCountries={loadingCountries}
+          disabled={isLoading} // Disable when global data is loading
           locationData={locationData}
           loadingLocationData={loadingLocationData}
+          locationError={locationError}
         />
 
         {/* Data Fields */}
@@ -114,7 +111,7 @@ export default function ScrapeForm({
           selectedDataTypes={selectedDataTypes}
           handleDataTypeChange={handleDataTypeChange}
           dataTypes={dataTypes}
-          loadingDataTypes={loadingDataTypes}
+          disabled={isLoading} // Disable when global data is loading
         />
 
         {/* Advanced Extraction Options */}
@@ -123,6 +120,8 @@ export default function ScrapeForm({
           setExtractSingleImage={setExtractSingleImage}
           maxReviews={maxReviews}
           setMaxReviews={setMaxReviews}
+          selectedDataTypes={selectedDataTypes}
+          disabled={isLoading} // Disable when global data is loading
         />
 
         {/* Ratings Filter */}
@@ -130,7 +129,7 @@ export default function ScrapeForm({
           selectedRating={selectedRating}
           setSelectedRating={setSelectedRating}
           ratings={ratings}
-          loadingRatings={loadingRatings}
+          disabled={isLoading} // Disable when global data is loading
         />
       </CardContent>
     </Card>

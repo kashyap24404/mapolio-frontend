@@ -1,12 +1,24 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Container from '@/components/ui/container';
 import Section from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 
 const CTASection: React.FC = () => {
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  const handleGetStarted = () => {
+    router.push('/signin');
+  };
+
   return (
     <Section className="bg-muted/30 border-t border-border" padding="xl">
       <Container size="lg">
@@ -18,15 +30,18 @@ const CTASection: React.FC = () => {
             Join thousands of professionals who trust Mapolio for their business data needs.
           </p>
           
-          <Button size="lg" className="h-11 px-6">
-            Get started
-            <ArrowRight className="h-4 w-4 ml-1.5" />
-          </Button>
+          {mounted ? (
+            <Button size="lg" className="h-11 px-6" onClick={handleGetStarted}>
+              Get started
+              <ArrowRight className="h-4 w-4 ml-1.5" />
+            </Button>
+          ) : (
+            <div className="h-11 w-36 bg-muted mx-auto rounded animate-pulse"></div>
+          )}
         </div>
       </Container>
     </Section>
   );
 };
-
 
 export default CTASection;

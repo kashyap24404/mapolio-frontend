@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,12 @@ const MapolioLogo = () => (
 const Navbar = () => {
   const router = useRouter();
   const { user, loading } = useSupabase();
+  const [mounted, setMounted] = useState(false);
+  
+  // Only show components after client-side hydration to prevent mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const navItems = [
     { name: 'Features', href: '#features' },
@@ -67,7 +73,7 @@ const Navbar = () => {
         <div className="flex items-center space-x-2">
           <ThemeToggle />
           
-          {loading ? (
+          {!mounted || loading ? (
             // Loading state
             <div className="flex items-center space-x-2">
               <div className="w-16 h-8 bg-muted animate-pulse rounded-md" />

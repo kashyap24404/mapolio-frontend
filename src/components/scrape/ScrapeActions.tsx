@@ -14,6 +14,7 @@ interface ScrapeActionsProps {
   handleStartScraping: () => void
   category: string
   isSubmitting?: boolean
+  isLoading?: boolean // Global loading state from context
 }
 
 export default function ScrapeActions({
@@ -23,7 +24,8 @@ export default function ScrapeActions({
   handleEstimate,
   handleStartScraping,
   category,
-  isSubmitting = false
+  isSubmitting = false,
+  isLoading = false
 }: ScrapeActionsProps) {
   // estimatedResults now represents estimated credits needed
 
@@ -94,7 +96,7 @@ export default function ScrapeActions({
       {/* Estimate Button */}
       <Button 
         onClick={handleEstimate} 
-        disabled={!category || isEstimating}
+        disabled={!category || isEstimating || isLoading}
         variant="outline"
         className="w-full"
       >
@@ -105,7 +107,7 @@ export default function ScrapeActions({
       {/* Start Scraping */}
       <Button 
         onClick={handleStartScraping}
-        disabled={!estimatedResults || !credits || estimatedResults > credits.total || !category || isSubmitting}
+        disabled={!estimatedResults || !credits || estimatedResults > credits.total || !category || isSubmitting || isLoading}
         className="w-full"
         size="lg"
       >
@@ -116,7 +118,7 @@ export default function ScrapeActions({
       {/* Need More Credits? */}
       {estimatedResults > 0 && credits && estimatedResults > credits.total && (
         <Link href="/dashboard/billing">
-          <Button variant="outline" className="w-full" size="lg">
+          <Button variant="outline" className="w-full" size="lg" disabled={isLoading}>
             <CreditCard className="h-4 w-4 mr-2" />
             Buy More Credits
           </Button>

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Container from '@/components/ui/container';
 import Section from '@/components/ui/section';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 import { Check } from 'lucide-react';
 import { useSupabase } from '@/lib/supabase-provider';
 
@@ -20,20 +21,89 @@ const features = [
 ];
 
 const PricingSection: React.FC = () => {
-  const [credits, setCredits] = useState([1667]); // Start with minimum for $5
+  const [credits, setCredits] = useState(1000); // Start with minimum 1000
+  const [inputValue, setInputValue] = useState('1,000'); // Formatted value for display
   const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { user, purchaseCredits } = useSupabase();
   
-  const pricePerCredit = 0.003; // $3 per 1000 credits = $0.003 per credit
-  const minCredits = 1667; // Minimum for $5 ($5 / $0.003 = 1666.67, rounded up)
-  const maxCredits = 1000000;
+  // Only render interactive elements after client-side hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
-  const currentCredits = credits[0];
-  const totalPrice = Math.max(5, currentCredits * pricePerCredit).toFixed(2); // Minimum $5
+  const pricePerCredit = 0.003; // $3 per 1000 credits = $0.003 per credit
+  const minCredits = 1000; // Updated minimum to 1000
+  const maxCredits = 1000000;
+  const step = 1000; // Step size of 1000
+  
+  // Format number with commas
+  const formatNumber = (num: number) => {
+    return num.toLocaleString();
+  };
+  
+  // Parse formatted number (remove commas)
+  const parseNumber = (str: string) => {
+    return parseInt(str.replace(/,/g, '')) || 0;
+  };
+  
+  // Round to nearest 1000
+  const roundToNearestThousand = (value: number) => {
+    return Math.round(value / 1000) * 1000;
+  };
+  
+  // Update both credits and input value
+  const updateCredits = (newCredits: number) => {
+    const roundedCredits = Math.max(minCredits, Math.min(maxCredits, roundToNearestThousand(newCredits)));
+    setCredits(roundedCredits);
+    setInputValue(formatNumber(roundedCredits));
+  };
+  
+  const totalPrice = Math.max(5, credits * pricePerCredit).toFixed(2); // Minimum $5
   
   const handleSliderChange = (value: number[]) => {
-    setCredits(value);
+    updateCredits(value[0]);
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow temporary clearing for mobile users
+    if (value === '') {
+      setInputValue('');
+      return;
+    }
+    
+    // Remove non-numeric characters except commas
+    const numericValue = value.replace(/[^0-9,]/g, '');
+    setInputValue(numericValue);
+    
+    // Parse and update credits if valid
+    const parsed = parseNumber(numericValue);
+    if (parsed > 0) {
+      const rounded = roundToNearestThousand(parsed);
+      setCredits(rounded);
+    }
+  };
+  
+  const handleInputBlur = () => {
+    // Ensure we have a valid value on blur
+    if (inputValue === '' || parseNumber(inputValue) < minCredits) {
+      updateCredits(minCredits);
+    } else {
+      updateCredits(parseNumber(inputValue));
+    }
+  };
+  
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      updateCredits(credits + step);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      updateCredits(credits - step);
+    }
   };
   
   const handlePurchase = async () => {
@@ -44,10 +114,10 @@ const PricingSection: React.FC = () => {
     }
     
     setIsLoading(true);
-    const { success, error } = await purchaseCredits(currentCredits, parseFloat(totalPrice));
+    const { success, error } = await purchaseCredits(credits, parseFloat(totalPrice));
     
     if (success) {
-      alert(`Successfully purchased ${currentCredits.toLocaleString()} credits!`);
+      alert(`Successfully purchased ${credits.toLocaleString()} credits!`);
     } else {
       alert('Purchase failed: ' + (error?.message || 'Unknown error'));
     }
@@ -90,7 +160,7 @@ const PricingSection: React.FC = () => {
                   </CardTitle>
                   <div className="mb-6">
                     <span className="text-4xl font-semibold text-foreground">${totalPrice}</span>
-                    <span className="text-muted-foreground ml-2">for {currentCredits.toLocaleString()} credits</span>
+                    <span className="text-muted-foreground ml-2">for {credits.toLocaleString()} credits</span>
                   </div>
                   <div className="text-sm text-muted-foreground mb-6">
                     ${pricePerCredit.toFixed(3)} per business record
@@ -108,26 +178,59 @@ const PricingSection: React.FC = () => {
                   <div className="space-y-4 mb-6">
                     <div className="flex justify-between text-sm text-muted-foreground">
                       <span>{formatCredits(minCredits)}</span>
-                      <span className="font-medium text-foreground">{formatCredits(currentCredits)} credits</span>
+                      <span className="font-medium text-foreground">{formatCredits(credits)} credits</span>
                       <span>{formatCredits(maxCredits)}</span>
                     </div>
-                    <Slider
-                      value={credits}
-                      onValueChange={handleSliderChange}
-                      min={minCredits}
-                      max={maxCredits}
-                      step={100}
-                      className="w-full"
-                    />
+                    {mounted ? (
+                      <Slider
+                        value={[credits]}
+                        onValueChange={handleSliderChange}
+                        min={minCredits}
+                        max={maxCredits}
+                        step={step}
+                        className="w-full"
+                      />
+                    ) : (
+                      <div className="w-full h-4 bg-muted rounded-md"></div>
+                    )}
+                    
+                    {/* Editable Input Field */}
+                    <div className="pt-4">
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Credits Amount
+                      </label>
+                      <div className="relative">
+                        <Input
+                          ref={inputRef}
+                          type="text"
+                          value={inputValue}
+                          onChange={handleInputChange}
+                          onBlur={handleInputBlur}
+                          onKeyDown={handleKeyDown}
+                          className="w-full pr-12"
+                          placeholder="Enter credits"
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground">
+                          credits
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Use ↑↓ arrow keys to adjust credits
+                      </p>
+                    </div>
                   </div>
                   
-                  <Button 
-                    className="w-full mb-6 h-10 bg-foreground text-background hover:bg-foreground/90"
-                    onClick={handlePurchase}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Processing...' : `Get ${formatCredits(currentCredits)} Credits`}
-                  </Button>
+                  {mounted ? (
+                    <Button 
+                      className="w-full mb-6 h-10 bg-foreground text-background hover:bg-foreground/90"
+                      onClick={handlePurchase}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Processing...' : `Get ${formatCredits(credits)} Credits`}
+                    </Button>
+                  ) : (
+                    <div className="w-full h-10 bg-muted rounded-md mb-6"></div>
+                  )}
                 </CardHeader>
                 
                 <CardContent className="pt-0">
@@ -148,6 +251,5 @@ const PricingSection: React.FC = () => {
     </Section>
   );
 };
-
 
 export default PricingSection;

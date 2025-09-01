@@ -8,6 +8,24 @@ import { Button } from "@/components/ui/button"
 
 export function ThemeToggle() {
   const { setTheme, theme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
+
+  // Only render the toggle after mounting to avoid hydration mismatch
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 px-0 opacity-0"
+      >
+        <span className="sr-only">Theme toggle placeholder</span>
+      </Button>
+    )
+  }
 
   return (
     <Button
