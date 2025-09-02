@@ -3,6 +3,29 @@ import * as paypal from '@paypal/checkout-server-sdk';
 import { paypalClient } from '@/lib/paypal';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 
+// Function to get the active pricing plan
+async function getActivePricingPlan() {
+  try {
+    const supabase = await createServerSupabaseClient();
+    
+    const { data, error } = await supabase
+      .from('pricing_plan')
+      .select('*')
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Error fetching pricing plan:', error);
+      return null;
+    }
+
+    // Return the first active plan if any exist, otherwise null
+    return data && data.length > 0 ? data[0] : null;
+  } catch (error) {
+    console.error('Unexpected error getting pricing plan:', error);
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Get the request body
@@ -36,8 +59,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized - No valid session. Please sign in first." }, { status: 401 });
     }
 
+    // Get pricing plan
+    const pricingPlan = await getActivePricingPlan();
+    const pricePerCredit = pricingPlan?.price_per_credit || 0.003; // Fallback to $0.003 per credit
+    
     // Calculate price (server-side calculation to prevent manipulation)
-    const pricePerCredit = 0.003; // $0.003 per credit
     const totalAmountInCents = Math.round(creditsToPurchase * pricePerCredit * 100); // Convert to cents
     const totalAmountInDollars = (totalAmountInCents / 100).toFixed(2);
 

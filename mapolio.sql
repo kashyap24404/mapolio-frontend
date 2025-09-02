@@ -84,6 +84,7 @@ CREATE TABLE public.scraper_data_types (
   label text NOT NULL,
   restricted_to_plans ARRAY NOT NULL DEFAULT '{}'::text[],
   created_at timestamp with time zone NOT NULL DEFAULT now(),
+  credits_increase numeric null,
   CONSTRAINT scraper_data_types_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.scraper_ratings (
@@ -109,3 +110,4 @@ CREATE TABLE public.scraper_task (
   CONSTRAINT scraper_task_pkey PRIMARY KEY (id),
   CONSTRAINT scraper_task_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
+INSERT INTO "public"."pricing_plan" ("id", "name", "price_per_credit", "min_purchase_usd", "description", "is_active", "created_at", "updated_at", "max_purchase_usd") VALUES ('1', 'Standard', '0.0030', '9.00', '$0.003 per credit', 'true', '2025-09-02 06:40:57.543421+00', '2025-09-02 06:41:35.653309+00', '350');

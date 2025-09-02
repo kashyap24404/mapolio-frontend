@@ -8,6 +8,7 @@ import {
   TaskCompletionSection,
   TaskDetailsSection,
   ConfigurationDetailsSection,
+  DownloadSection,
   ActionButtonsSection
 } from './index'
 import { Task } from '../types'
@@ -25,11 +26,12 @@ export function TaskDetailContent({ task, loading, onRefresh, onBack, onDownload
     <>
       <TaskDetailHeader task={task} onBack={onBack} />
       
-      <Card>
-        <CardContent className="space-y-6">
+      <Card className="overflow-hidden border-border shadow-md mb-6">
+        <CardContent className="space-y-6 p-6">
           <TaskProgressSection task={task} />
           <TaskErrorSection task={task} />
           <TaskCompletionSection task={task} />
+          {task.status === 'completed' && <DownloadSection task={task} onDownload={onDownload} />}
           <TaskDetailsSection task={task} />
           <ConfigurationDetailsSection task={task} />
           <ActionButtonsSection 

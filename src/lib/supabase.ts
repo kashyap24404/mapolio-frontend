@@ -1,5 +1,4 @@
 import { createBrowserClient } from '@supabase/ssr'
-import type { Database } from '@/lib/supabase'
 
 // Create a single supabase client for client-side use
 export const supabase = createBrowserClient<Database>(
@@ -175,6 +174,41 @@ interface Database {
           transaction_type?: 'purchase' | 'usage'
           description?: string
           created_at?: string
+        }
+      }
+      pricing_plan: {
+        Row: {
+          id: string
+          name: string
+          price_per_credit: number
+          min_purchase_usd: number
+          max_purchase_usd: number
+          description: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          price_per_credit: number
+          min_purchase_usd: number
+          max_purchase_usd: number
+          description: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          price_per_credit?: number
+          min_purchase_usd?: number
+          max_purchase_usd?: number
+          description?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
         }
       }
     }

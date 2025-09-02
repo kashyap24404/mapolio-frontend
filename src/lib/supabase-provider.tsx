@@ -8,6 +8,19 @@ import type { Database } from '@/lib/supabase'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 
+// Define the pricing plan type based on your table structure
+interface PricingPlan {
+  id: string
+  name: string
+  price_per_credit: number
+  min_purchase_usd: number
+  max_purchase_usd: number
+  description: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 interface UserCredits {
   total: number
 }
@@ -16,6 +29,7 @@ interface SupabaseContextType {
   user: User | null
   profile: Profile | null
   credits: UserCredits | null
+  pricingPlan: PricingPlan | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: any }>
   signUp: (email: string, password: string, displayName?: string) => Promise<{ success: boolean; error?: any; needsVerification?: boolean; email?: string }>
@@ -32,6 +46,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [credits, setCredits] = useState<UserCredits | null>(null)
+  const [pricingPlan, setPricingPlan] = useState<PricingPlan | null>(null)
   const [loading, setLoading] = useState(true)
 
   // Initialize and check for existing session
@@ -55,6 +70,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
           setUser(session.user)
           await loadUserProfile(session.user.id)
         }
+        
+        // Load pricing plan regardless of user authentication
+        await loadPricingPlan()
         
         setLoading(false)
       } catch (error) {
@@ -124,6 +142,19 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Unexpected error loading user credits:', error)
+    }
+  }
+
+  const loadPricingPlan = async () => {
+    try {
+      const { plan, error } = await creditService.getActivePricingPlan()
+      if (!error && plan) {
+        setPricingPlan(plan)
+      } else if (error) {
+        console.error('Error loading pricing plan:', error)
+      }
+    } catch (error) {
+      console.error('Unexpected error loading pricing plan:', error)
     }
   }
 
@@ -265,6 +296,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     user,
     profile,
     credits,
+    pricingPlan,
     loading,
     signIn,
     signUp,

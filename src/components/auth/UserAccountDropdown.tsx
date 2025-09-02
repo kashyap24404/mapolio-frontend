@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 
 const UserAccountDropdown: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false)
-  const { user, profile, credits, signOut } = useSupabase()
+  const { user, profile, credits, pricingPlan, signOut } = useSupabase()
 
   if (!user || !profile) return null
 
@@ -90,7 +90,7 @@ const UserAccountDropdown: React.FC = () => {
                   </div>
                   {credits && credits.total > 0 && (
                     <div className="text-xs text-muted-foreground mt-1">
-                      ≈ ${(credits.total * 0.003).toFixed(2)} value
+                      ≈ ${(credits.total * (pricingPlan?.price_per_credit || 0.003)).toFixed(2)} value
                     </div>
                   )}
                 </div>

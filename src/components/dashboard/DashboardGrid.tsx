@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useSupabase } from '@/lib/supabase-provider'
@@ -13,12 +13,66 @@ import {
   Download,
   Target,
   TrendingUp,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import RecentScraperTasks from './RecentScraperTasks'
 
 const DashboardGrid: React.FC = () => {
-  const { profile, credits } = useSupabase()
+  const router = useRouter()
+  const { profile, credits, loading, pricingPlan } = useSupabase()
+  const [isLoading, setIsLoading] = useState(false)
+  const [taskStats, setTaskStats] = useState({
+    searches: 0,
+    results: 0,
+    creditsUsed: 0,
+    pendingTasks: 0,
+    recentActivities: []
+  })
+  
+  // Function to handle navigation with loading state
+  const handleNavigation = (path: string) => {
+    setIsLoading(true)
+    router.push(path)
+  }
+  
+  // Function to fetch task statistics
+  useEffect(() => {
+    // In a real implementation, this would fetch data from your backend
+    // For now, we'll use placeholder data
+    const fetchTaskStats = async () => {
+      try {
+        // This would be an actual API call in production
+        // const response = await fetch('/api/task-stats')
+        // const data = await response.json()
+        
+        // Using placeholder data for now
+        setTaskStats({
+          searches: 0,
+          results: 0,
+          creditsUsed: 0,
+          pendingTasks: 0,
+          recentActivities: []
+        })
+      } catch (error) {
+        console.error('Error fetching task stats:', error)
+      }
+    }
+    
+    if (profile?.id) {
+      fetchTaskStats()
+    }
+  }, [profile?.id])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      </div>
+    )
+  }
 
   if (!profile) return null
 
@@ -50,16 +104,23 @@ const DashboardGrid: React.FC = () => {
                 Credits Available
               </div>
               {credits && credits.total > 0 && (
-                <div className="text-xs text-muted-foreground mb-4">
-                  ≈ ${(credits.total * 0.003).toFixed(2)} value
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Credit value: {credits.total} × ${(pricingPlan?.price_per_credit || 0.003).toFixed(4)} = ${(credits.total * (pricingPlan?.price_per_credit || 0.003)).toFixed(2)}
+                </p>
               )}
-              <Link href="/dashboard/billing">
-                <Button size="sm" className="w-full">
+              <Button 
+                size="sm" 
+                className="w-full"
+                onClick={() => handleNavigation('/dashboard/pricing')}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
                   <Plus className="h-4 w-4 mr-2" />
-                  Buy Credits
-                </Button>
-              </Link>
+                )}
+                Buy Credits
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -82,9 +143,15 @@ const DashboardGrid: React.FC = () => {
                 <Clock className="h-4 w-4 text-yellow-500 mr-2" />
                 <span className="text-muted-foreground">Job in progress</span>
               </div>
-              <div className="text-xs text-muted-foreground text-center pt-2">
-                No recent activity
-              </div>
+              {taskStats.recentActivities.length > 0 ? (
+                <div className="space-y-2">
+                  {/* This would display actual activities in a real implementation */}
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground text-center pt-2">
+                  No recent activity
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -101,15 +168,15 @@ const DashboardGrid: React.FC = () => {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Searches</span>
-                <span className="font-semibold">0</span>
+                <span className="font-semibold">{taskStats.searches}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Results</span>
-                <span className="font-semibold">0</span>
+                <span className="font-semibold">{taskStats.results}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Credits Used</span>
-                <span className="font-semibold">0</span>
+                <span className="font-semibold">{taskStats.creditsUsed}</span>
               </div>
             </div>
           </CardContent>
@@ -125,46 +192,32 @@ const DashboardGrid: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <Link href="/dashboard/scrape">
-                <Button variant="outline" className="w-full justify-start">
-                  <Search className="h-4 w-4 mr-2" />
-                  New Search
-                </Button>
-              </Link>
-              <Link href="/dashboard/results">
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Results
-                </Button>
-              </Link>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => handleNavigation('/dashboard/scrape')}
+                disabled={isLoading}
+              >
+                <Search className="h-4 w-4 mr-2" />
+                New Search
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => handleNavigation('/dashboard/results')}
+                disabled={isLoading}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export Results
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Pending Tasks Card */}
-        <Card className="col-span-1 md:col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center text-lg">
-              <Clock className="h-5 w-5 mr-2" />
-              Pending Tasks
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8">
-              <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-medium text-foreground mb-2">No pending tasks</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                All your scraping jobs are completed or haven't started yet.
-              </p>
-              <Link href="/dashboard/scrape">
-                <Button size="sm">
-                  <Search className="h-4 w-4 mr-2" />
-                  Start New Search
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Recent Scraper Tasks Card */}
+        <div className="col-span-1 md:col-span-2">
+          <RecentScraperTasks />
+        </div>
 
         {/* Recent Results Preview */}
         <Card className="col-span-1 md:col-span-2 lg:col-span-3 xl:col-span-2">
@@ -181,16 +234,17 @@ const DashboardGrid: React.FC = () => {
               <p className="text-sm text-muted-foreground mb-4">
                 Start your first scraping job to see results here.
               </p>
-              <Link href="/dashboard/scrape">
-                <Button size="sm">
-                  <Search className="h-4 w-4 mr-2" />
-                  Get Started
-                </Button>
-              </Link>
+              <Button 
+                size="sm"
+                onClick={() => handleNavigation('/dashboard/scrape')}
+                disabled={isLoading}
+              >
+                <Search className="h-4 w-4 mr-2" />
+                Get Started
+              </Button>
             </div>
           </CardContent>
         </Card>
-
       </div>
     </div>
   )

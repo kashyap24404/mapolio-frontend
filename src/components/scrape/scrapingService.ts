@@ -126,7 +126,9 @@ export const ScrapingService = {
         total_results: task.total_results,
         credits_used: task.credits_used,
         error_message: task.error_message,
-        config: task.config
+        config: task.config,
+        result_json_url: task.result_json_url,
+        result_csv_url: task.result_csv_url
       })) || []
       
       return {

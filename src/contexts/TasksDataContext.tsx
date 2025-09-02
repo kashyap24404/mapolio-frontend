@@ -142,7 +142,11 @@ export const TasksDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             filter: `user_id=eq.${user.id}`
           },
           (payload) => {
-            console.log('TasksDataContext: Task updated:', payload);
+            console.log('TasksDataContext: Task updated:', payload)
+            console.log('TasksDataContext: URL fields:', {
+              result_json_url: payload.new.result_json_url,
+              result_csv_url: payload.new.result_csv_url
+            });
             
             // Update the specific task in our list
             setTasks(prevTasks => 

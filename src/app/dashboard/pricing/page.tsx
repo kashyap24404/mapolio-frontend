@@ -24,36 +24,50 @@ const features = [
 
 export default function PricingPage() {
   const router = useRouter()
-  const [credits, setCredits] = useState<number[]>([1000]) // Start with minimum 1000 credits as array
+  const [credits, setCredits] = useState<number[]>([3000]) // Will be updated with dynamic value
   const [isLoading, setIsLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const [inputValue, setInputValue] = useState('1,000') // Track input value separately
+  const [inputValue, setInputValue] = useState('3,000') // Will be updated with dynamic value
   const [showPayPal, setShowPayPal] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { user, purchaseCredits } = useSupabase()
+  const { user, purchaseCredits, pricingPlan } = useSupabase()
   
   // Only render interactive elements after client-side hydration
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Update input value when credits change (from slider)
+  // Update values when pricing plan loads
   useEffect(() => {
-    setInputValue(credits[0].toLocaleString())
-  }, [credits])
+    if (pricingPlan) {
+      const minCredits = Math.ceil(pricingPlan.min_purchase_usd / pricingPlan.price_per_credit);
+      setCredits([minCredits]);
+      setInputValue(minCredits.toLocaleString());
+    }
+  }, [pricingPlan]);
   
-  const pricePerCredit = 0.003 // $3 per 1000 credits = $0.003 per credit
-  const minCredits = 1000 // Minimum credits set to 1000
-  const maxCredits = 1000000 // Max 1M credits
+  // Keep input value in sync with credits state
+  useEffect(() => {
+    if (credits[0] > 0) {
+      setInputValue(credits[0].toLocaleString());
+    }
+  }, [credits]);
+  
+  // Use dynamic values from pricing plan or fallback to defaults
+  const pricePerCredit = pricingPlan?.price_per_credit || 0.003; // $3 per 1000 credits = $0.003 per credit
+  const minCredits = pricingPlan ? Math.ceil(pricingPlan.min_purchase_usd / pricePerCredit) : 3000;
+  const maxCredits = pricingPlan ? Math.ceil(pricingPlan.max_purchase_usd / pricePerCredit) : 150000;
   
   const currentCredits = credits[0]
-  // Calculate price with a minimum of $3 (for 1000 credits)
-  const totalPrice = (currentCredits * pricePerCredit).toFixed(2)
+  // Calculate price with dynamic minimum
+  const totalPrice = Math.max(pricingPlan?.min_purchase_usd || 9, currentCredits * pricePerCredit).toFixed(2)
   
   const handleSliderChange = (value: number[]) => {
     // Round to nearest 1000 to ensure clean increments
     const roundedValue = Math.round(value[0] / 1000) * 1000
     setCredits([roundedValue])
+    // Sync the input value with the slider
+    setInputValue(roundedValue.toLocaleString())
   }
   
   // Add handler for input field
@@ -229,7 +243,7 @@ export default function PricingPage() {
                 <Card className="relative border-border ring-2 ring-foreground">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
                     {/* Left Side - Price Display */}
-                    <div className="lg:border-r border-border bg-background">
+                    <div className="lg:border-r border-border">
                       <div className="text-left px-8 py-10">
                         <h3 className="text-xl font-medium text-foreground mb-8">
                           Credit Calculator
@@ -239,20 +253,20 @@ export default function PricingPage() {
                           <span className="text-muted-foreground ml-2">for {currentCredits.toLocaleString()} credits</span>
                         </div>
                         <div className="text-sm text-foreground/80 mb-6">
-                          $0.003 per business record
+                          ${pricePerCredit.toFixed(4)} per business record
                         </div>
                         <div className="text-sm text-foreground/80">
-                          $3 per 1,000 credits • Minimum 1,000 credits
+                          ${(pricePerCredit * 1000).toFixed(0)} per 1,000 credits • Minimum ${pricingPlan?.min_purchase_usd || 9}
                         </div>
                       </div>
                     </div>
                     
                     {/* Right Side - Slider and Features */}
-                    <div className="px-8 py-10 bg-background">
+                    <div className="px-8 py-10">
                       {/* Min/Max labels */}
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-foreground/70">1K</span>
-                        <span className="text-sm text-foreground/70">1M</span>
+                        <span className="text-sm text-foreground/70">{formatCredits(minCredits)}</span>
+                        <span className="text-sm text-foreground/70">{formatCredits(maxCredits)}</span>
                       </div>
                       
                       {/* Credit Slider */}
@@ -290,7 +304,7 @@ export default function PricingPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Helper text */}
                       <div className="text-xs text-center text-foreground/70 mb-6">
                         Use ↑/↓ keys to adjust by 1,000 credits

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -21,22 +21,32 @@ const features = [
 ];
 
 const PricingSection: React.FC = () => {
-  const [credits, setCredits] = useState(1000); // Start with minimum 1000
-  const [inputValue, setInputValue] = useState('1,000'); // Formatted value for display
+  const [credits, setCredits] = useState(3000); // Will be updated with dynamic value
+  const [inputValue, setInputValue] = useState('3,000'); // Will be updated with dynamic value
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const { user, purchaseCredits } = useSupabase();
+  const { user, purchaseCredits, pricingPlan } = useSupabase();
   
   // Only render interactive elements after client-side hydration
   useEffect(() => {
     setMounted(true);
   }, []);
   
-  const pricePerCredit = 0.003; // $3 per 1000 credits = $0.003 per credit
-  const minCredits = 1000; // Updated minimum to 1000
-  const maxCredits = 1000000;
+  // Update values when pricing plan loads
+  useEffect(() => {
+    if (pricingPlan) {
+      const minCredits = Math.ceil(pricingPlan.min_purchase_usd / pricingPlan.price_per_credit);
+      setCredits(minCredits);
+      setInputValue(minCredits.toLocaleString());
+    }
+  }, [pricingPlan]);
+  
+  // Use dynamic values from pricing plan or fallback to defaults
+  const pricePerCredit = pricingPlan?.price_per_credit || 0.003; // $3 per 1000 credits = $0.003 per credit
+  const minCredits = pricingPlan ? Math.ceil(pricingPlan.min_purchase_usd / pricePerCredit) : 3000;
+  const maxCredits = pricingPlan ? Math.ceil(pricingPlan.max_purchase_usd / pricePerCredit) : 1000000;
   const step = 1000; // Step size of 1000
   
   // Format number with commas
@@ -61,7 +71,7 @@ const PricingSection: React.FC = () => {
     setInputValue(formatNumber(roundedCredits));
   };
   
-  const totalPrice = Math.max(5, credits * pricePerCredit).toFixed(2); // Minimum $5
+  const totalPrice = Math.max(pricingPlan?.min_purchase_usd || 9, credits * pricePerCredit).toFixed(2); // Use dynamic minimum
   
   const handleSliderChange = (value: number[]) => {
     updateCredits(value[0]);
@@ -166,7 +176,7 @@ const PricingSection: React.FC = () => {
                     ${pricePerCredit.toFixed(3)} per business record
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    $3 per 1,000 credits • Minimum $5
+                    ${(pricePerCredit * 1000).toFixed(0)} per 1,000 credits • Minimum ${pricingPlan?.min_purchase_usd || 9}
                   </div>
                 </CardHeader>
               </div>

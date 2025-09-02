@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { FileText, Download, Search, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react'
+import { FileText, Search, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
 export default function ResultsPage() {
@@ -25,29 +25,6 @@ export default function ResultsPage() {
     refreshTasks,
     subscriptionStatus
   } = useTasksData()
-
-  // Add this function for handling downloads
-  const handleDownload = (task: any, format: 'json' | 'csv') => {
-    // Prevent the card click event from firing
-    event?.stopPropagation()
-    
-    const url = format === 'json' ? task.result_json_url : task.result_csv_url
-    const filename = `task-${task.id}.${format}`
-    
-    if (!url) {
-      alert(`Download URL not available for ${format.toUpperCase()} format`)
-      return
-    }
-    
-    // Create a temporary link and trigger download
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    link.target = '_blank'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -200,34 +177,6 @@ export default function ResultsPage() {
                               <Badge variant={getStatusColor(task.status) as 'secondary' | 'default' | 'destructive'}>
                                 {task.status}
                               </Badge>
-                              {task.status === 'completed' && (
-                                <div className="flex space-x-1">
-                                  {task.result_json_url && (
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleDownload(task, 'json')
-                                      }}
-                                    >
-                                      <Download className="h-4 w-4" />
-                                      </Button>
-                                  )}
-                                  {task.result_csv_url && (
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleDownload(task, 'csv')
-                                      }}
-                                    >
-                                      <Download className="h-4 w-4" />
-                                      </Button>
-                                  )}
-                                </div>
-                              )}
                             </div>
                           </div>
                         </CardHeader>

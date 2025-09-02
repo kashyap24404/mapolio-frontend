@@ -7,13 +7,19 @@ import { useSupabase } from '@/lib/supabase-provider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CreditCard, Plus } from 'lucide-react'
+import Link from 'next/link'
 
 export default function BillingPage() {
-  const { user, profile, credits } = useSupabase()
+  const { user, profile, credits, pricingPlan } = useSupabase()
 
   if (!user || !profile) {
     return <div>Please sign in to access this page.</div>
   }
+
+  // Use dynamic values from pricing plan or fallback to defaults
+  const pricePerCredit = pricingPlan?.price_per_credit || 0.003;
+  const minPurchaseUsd = pricingPlan?.min_purchase_usd || 9;
+  const creditsPerDollar = Math.floor(1 / pricePerCredit);
 
   return (
     <div className="min-h-screen bg-background">
@@ -47,14 +53,16 @@ export default function BillingPage() {
                         </div>
                         {credits && credits.total > 0 && (
                           <div className="text-xs text-muted-foreground mt-1">
-                            ≈ ${(credits.total * 0.003).toFixed(2)} value
+                            ≈ ${(credits.total * pricePerCredit).toFixed(2)} value
                           </div>
                         )}
                       </div>
-                      <Button className="bg-foreground text-background hover:bg-foreground/90">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Buy Credits
-                      </Button>
+                      <Link href="/pricing">
+                        <Button className="bg-foreground text-background hover:bg-foreground/90">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Buy Credits
+                        </Button>
+                      </Link>
                     </div>
                   </CardContent>
                 </Card>
@@ -68,15 +76,19 @@ export default function BillingPage() {
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Cost per record</span>
-                        <span className="text-sm font-medium">$0.003</span>
+                        <span className="text-sm font-medium">${pricePerCredit.toFixed(4)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Bulk pricing</span>
-                        <span className="text-sm font-medium">$3 per 1,000 credits</span>
+                        <span className="text-sm font-medium">${(pricePerCredit * 1000).toFixed(0)} per 1,000 credits</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Minimum purchase</span>
-                        <span className="text-sm font-medium">$5 (≈1,667 credits)</span>
+                        <span className="text-sm font-medium">${minPurchaseUsd.toFixed(2)} (≈{Math.ceil(minPurchaseUsd / pricePerCredit).toLocaleString()} credits)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Credits per dollar</span>
+                        <span className="text-sm font-medium">≈{creditsPerDollar.toLocaleString()} credits</span>
                       </div>
                     </div>
                   </CardContent>

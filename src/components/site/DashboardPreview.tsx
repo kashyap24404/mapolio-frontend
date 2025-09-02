@@ -28,7 +28,7 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { user } = useSupabase();
+  const { user, pricingPlan } = useSupabase();
 
   // Function to handle PayPal payment initialization
   const handlePayPalPayment = async () => {
@@ -93,7 +93,7 @@ const DashboardPreview: React.FC<DashboardPreviewProps> = ({
               Complete Your Purchase
             </h3>
             <p className="mb-6 text-center">
-              You are about to purchase {creditsToPurchase.toLocaleString()} credits for ${(creditsToPurchase * 0.003).toFixed(2)}
+              You are about to purchase {creditsToPurchase.toLocaleString()} credits for ${(creditsToPurchase * (pricingPlan?.price_per_credit || 0.003)).toFixed(2)}
             </p>
             
             {error && (

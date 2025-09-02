@@ -81,6 +81,37 @@ export const userService = {
 
 // Credit Management
 export const creditService = {
+  // Get active pricing plan
+  async getActivePricingPlan() {
+    try {
+      const { data, error } = await supabase
+        .from('pricing_plan')
+        .select('*')
+
+      if (error) {
+        console.error('Error fetching pricing plan:', error)
+        return { 
+          plan: null, 
+          error 
+        }
+      }
+
+      // Return the first active plan if any exist, otherwise null
+      const plan = data && data.length > 0 ? data[0] : null;
+
+      return { 
+        plan, 
+        error: null 
+      }
+    } catch (error) {
+      console.error('Unexpected error getting pricing plan:', error)
+      return { 
+        plan: null, 
+        error: error instanceof Error ? error : new Error('Unknown error') 
+      }
+    }
+  },
+
   // Get user's credit balance
   async getUserCredits(userId: string) {
     const { data, error } = await supabase

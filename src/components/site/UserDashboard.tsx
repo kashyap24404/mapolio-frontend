@@ -7,7 +7,7 @@ import { useSupabase } from '@/lib/supabase-provider'
 import { CreditCard, User, LogOut } from 'lucide-react'
 
 const UserDashboard: React.FC = () => {
-  const { user, profile, credits, loading, signOut, refreshCredits, updateProfile } = useSupabase()
+  const { user, profile, credits, loading, signOut, refreshCredits, updateProfile, pricingPlan } = useSupabase()
 
   if (loading) {
     return (
@@ -82,7 +82,7 @@ const UserDashboard: React.FC = () => {
               </div>
               
               <div className="text-center text-sm text-muted-foreground">
-                <p>Credit value: {credits.total} × $0.003 = ${(credits.total * 0.003).toFixed(2)}</p>
+                <p>Credit value: {credits.total} × ${(pricingPlan?.price_per_credit || 0.003).toFixed(4)} = ${(credits.total * (pricingPlan?.price_per_credit || 0.003)).toFixed(2)}</p>
               </div>
             </div>
           ) : (

@@ -51,33 +51,42 @@ const sidebarItems = [
     icon: CreditCard
   },
   {
-    name: 'Settings',
-    href: '/dashboard/settings',
-    icon: Settings
-  },
-  {
     name: 'Profile',
     href: '/dashboard/profile',
     icon: User
+  },
+  {
+    name: 'Settings',
+    href: '/dashboard/settings',
+    icon: Settings
   }
 ]
 
 const DashboardSidebar: React.FC<SidebarProps> = ({ className }) => {
   const pathname = usePathname()
 
+  // Improved active state detection to work with nested routes
+  const isActive = (href: string) => {
+    if (href === '/dashboard' && pathname === '/dashboard') {
+      return true
+    }
+    // For other routes, check if the pathname starts with the href (for nested routes)
+    return href !== '/dashboard' && pathname?.startsWith(href)
+  }
+
   return (
-    <div className={cn("flex flex-col w-64 bg-background border-r border-border", className)}>
+    <div className={cn("flex flex-col w-64 bg-background border-r border-border relative", className)}>
       {/* Navigation Items */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
+      <nav className="px-4 py-6 space-y-2 pb-16">
         {sidebarItems.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href
+          const active = isActive(item.href)
           
           return (
             <Link key={item.name} href={item.href}>
               <div className={cn(
                 "flex items-center space-x-3 px-3 py-3 rounded-lg text-sm transition-colors",
-                isActive 
+                active 
                   ? "bg-foreground text-background" 
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
               )}>
@@ -89,10 +98,10 @@ const DashboardSidebar: React.FC<SidebarProps> = ({ className }) => {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="px-6 py-4 border-t border-border">
+      {/* Footer - using absolute positioning to stick to bottom */}
+      <div className="absolute bottom-0 left-0 right-0 px-6 py-4 border-t border-border bg-background">
         <div className="text-xs text-muted-foreground">
-          Dashboard v1.0
+          © {new Date().getFullYear()} Mapolio
         </div>
       </div>
     </div>
