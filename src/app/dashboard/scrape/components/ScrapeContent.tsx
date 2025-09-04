@@ -19,6 +19,7 @@ interface ScrapeContentProps {
   isLoading: boolean
   updateFormState: (updates: Partial<ScrapeFormState>) => void
   handleDataTypeChange: (dataTypeId: string, checked: boolean) => void
+  handleBulkDataTypeSelection: (dataTypeIds: string[]) => void
   handleEstimate: () => Promise<void>
   handleStartScraping: () => Promise<void>
 }
@@ -35,6 +36,7 @@ export const ScrapeContent: React.FC<ScrapeContentProps> = ({
   isLoading,
   updateFormState,
   handleDataTypeChange,
+  handleBulkDataTypeSelection,
   handleEstimate,
   handleStartScraping
 }) => {
@@ -61,6 +63,7 @@ export const ScrapeContent: React.FC<ScrapeContentProps> = ({
               setSelectedLocationPaths={(paths) => updateFormState({ selectedLocationPaths: paths })}
               selectedDataTypes={formState.selectedDataTypes}
               handleDataTypeChange={handleDataTypeChange}
+              handleBulkDataTypeSelection={handleBulkDataTypeSelection}
               selectedRating={formState.selectedRating}
               setSelectedRating={(rating) => updateFormState({ selectedRating: rating })}
               extractSingleImage={formState.extractSingleImage}
@@ -88,6 +91,7 @@ export const ScrapeContent: React.FC<ScrapeContentProps> = ({
               handleEstimate={handleEstimate}
               handleStartScraping={handleStartScraping}
               category={formState.category}
+              selectedDataTypes={formState.selectedDataTypes} // Add selectedDataTypes prop
               isSubmitting={formState.isSubmitting}
               isLoading={isLoading} // Pass loading state to actions
             />

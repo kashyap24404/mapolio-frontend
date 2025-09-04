@@ -211,6 +211,38 @@ interface Database {
           updated_at?: string
         }
       }
+      pages: {
+        Row: {
+          id: string
+          slug: string
+          title: string
+          content: string
+          created_at: string
+          updated_at: string
+          published: boolean
+          meta_description: string | null
+        }
+        Insert: {
+          id?: string
+          slug: string
+          title: string
+          content: string
+          created_at?: string
+          updated_at?: string
+          published?: boolean
+          meta_description?: string | null
+        }
+        Update: {
+          id?: string
+          slug?: string
+          title?: string
+          content?: string
+          created_at?: string
+          updated_at?: string
+          published?: boolean
+          meta_description?: string | null
+        }
+      }
     }
     Views: Record<string, never>
     Functions: {

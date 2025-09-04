@@ -63,7 +63,7 @@ const withTimeoutAndRetry = async <T>(fn: () => Promise<T>, timeoutMs: number = 
 };
 
 // User Management
-const userService = {
+export const userService = {
   // Create a new profile (used after signup)
   async createProfile(userId: string, email: string, displayName?: string) {
     try {
@@ -212,7 +212,7 @@ const userService = {
 }
 
 // Credit Management
-const creditService = {
+export const creditService = {
   // Get active pricing plan
   async getActivePricingPlan() {
     try {
@@ -357,7 +357,7 @@ const creditService = {
 }
 
 // Scraping Job Management
-const scrapingService = {
+export const scrapingService = {
   // Create a new scraping job
   async createJob(userId: string, searchQuery: string, location: string) {
     try {
@@ -474,7 +474,7 @@ const scrapingService = {
 };
 
 // Scraping Results Management
-const resultsService = {
+export const resultsService = {
   // Add results to a job
   async addResults(jobId: string, results: any[]) {
     try {
@@ -589,7 +589,7 @@ const resultsService = {
 };
 
 // Scraper Configuration Services
-const scraperService = {
+export const scraperService = {
   // Get all categories
   async getCategories() {
     try {
@@ -703,49 +703,6 @@ const scraperTaskService = {
     } catch (error) {
       console.error('Unexpected error getting completed tasks:', error);
       return { tasks: [], error };
-    }
-  },
-
-  // Get task statistics for the current month
-  async getThisMonthTaskStats(userId: string) {
-    try {
-      // Calculate the start of the current month
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const startOfMonthString = startOfMonth.toISOString();
-
-      // Get all tasks for the current month
-      const { data: tasks, error } = await withTimeoutAndRetry(
-        async () => {
-          const result = await supabase
-            .from('scraper_task')
-            .select('id, status, created_at, total_results, credits_used')
-            .eq('user_id', userId)
-            .gte('created_at', startOfMonthString)
-            .order('created_at', { ascending: false });
-          return result;
-        },
-        30000, // 30 second timeout
-        3 // 3 retries
-      );
-
-      if (error) {
-        console.error('Error fetching this month tasks:', error);
-        return { stats: null, error };
-      }
-
-      // Calculate statistics
-      const stats = {
-        searches: tasks.length,
-        results: tasks.reduce((sum, task) => sum + (task.total_results || 0), 0),
-        creditsUsed: tasks.reduce((sum, task) => sum + (task.credits_used || 0), 0),
-        pendingTasks: tasks.filter(task => task.status === 'pending' || task.status === 'running').length
-      };
-
-      return { stats, error: null };
-    } catch (error) {
-      console.error('Unexpected error getting this month task stats:', error);
-      return { stats: null, error };
     }
   }
 }

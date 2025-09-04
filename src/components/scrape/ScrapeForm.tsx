@@ -24,6 +24,7 @@ interface ScrapeFormProps {
   setSelectedLocationPaths: (paths: string[][]) => void
   selectedDataTypes: string[]
   handleDataTypeChange: (dataTypeId: string, checked: boolean) => void
+  handleBulkDataTypeSelection?: (dataTypeIds: string[]) => void
   selectedRating: string
   setSelectedRating: (value: string) => void
   extractSingleImage: boolean
@@ -57,6 +58,7 @@ export default function ScrapeForm({
   setSelectedLocationPaths,
   selectedDataTypes,
   handleDataTypeChange,
+  handleBulkDataTypeSelection,
   selectedRating,
   setSelectedRating,
   extractSingleImage,
@@ -110,6 +112,7 @@ export default function ScrapeForm({
         <DataFieldsSection
           selectedDataTypes={selectedDataTypes}
           handleDataTypeChange={handleDataTypeChange}
+          handleBulkDataTypeSelection={handleBulkDataTypeSelection}
           dataTypes={dataTypes}
           disabled={isLoading} // Disable when global data is loading
         />

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,7 @@ import { Check, ChevronDown, X } from 'lucide-react'
 
 export interface MultiSelectOption {
   id: string
-  label: string
+  label: string | ReactNode
 }
 
 interface MultiSelectProps {
@@ -74,9 +74,20 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
     }
 
     // Filter options based on search term
-    const filteredOptions = options.filter(option =>
-      (option.label || '').toLowerCase().includes((searchTerm || '').toLowerCase())
-    )
+    const filteredOptions = options.filter(option => {
+      if (typeof option.label === 'string') {
+        return option.label.toLowerCase().includes((searchTerm || '').toLowerCase());
+      }
+      // For React nodes, use a simpler approach to avoid TypeScript errors
+      // Just include all React node items when there's no search term
+      // When there is a search term, exclude them unless they match some basic criteria
+      if (!searchTerm) {
+        return true; // Include all items when not searching
+      }
+      
+      // Basic filtering for React nodes - match by option ID if it contains the search term
+      return option.id.toLowerCase().includes(searchTerm.toLowerCase());
+    })
 
     // Get selected options for display
     const selectedOptions = options.filter(option => selectedValues.includes(option.id))
@@ -93,14 +104,17 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
 
     // Clear all selections
     const clearAll = () => {
+      console.log('Clear All clicked')
+      // Simply clear all selections
       onSelectionChange([])
     }
 
     // Select all filtered options
     const selectAll = () => {
-      const filteredIds = filteredOptions.map(option => option.id)
-      const newSelections = [...new Set([...selectedValues, ...filteredIds])]
-      onSelectionChange(newSelections)
+      console.log('Select All clicked', { allOptions: options.length })
+      // Get all option IDs from the options array
+      const allOptionIds = options.map(option => option.id)
+      onSelectionChange(allOptionIds)
     }
 
     // Format display text
@@ -109,11 +123,8 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
         return placeholder
       }
       
-      if (selectedOptions.length <= maxDisplayItems) {
-        return selectedOptions.map(option => option.label || `Option ${option.id}`).join(', ')
-      }
-      
-      return `${selectedOptions.slice(0, maxDisplayItems).map(option => option.label || `Option ${option.id}`).join(', ')}, +${selectedOptions.length - maxDisplayItems} more`
+      // For simplicity, just show the number of selected items
+      return `${selectedOptions.length} item${selectedOptions.length !== 1 ? 's' : ''} selected`;
     }
 
     return (
@@ -147,7 +158,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                 key={option.id}
                 className="inline-flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded text-xs"
               >
-                {option.label || `Option ${option.id}`}
+                {typeof option.label === 'string' ? option.label : `Option ${option.id}`}
                 <button
                   type="button"
                   onClick={(e) => {
@@ -198,7 +209,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                       size="sm"
                       onClick={selectAll}
                       className="h-6 text-xs px-2"
-                      disabled={filteredOptions.length === 0}
+                      disabled={options.length === 0}
                     >
                       Select All
                     </Button>
@@ -232,9 +243,9 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                           )}
                           onClick={() => toggleOption(option.id)}
                         >
-                          <span className="truncate">{option.label || `Option ${option.id}`}</span>
+                          <div className="truncate flex-1 text-left">{option.label}</div>
                           {isSelected && (
-                            <Check className="h-4 w-4 text-primary shrink-0" />
+                            <Check className="h-4 w-4 text-primary shrink-0 ml-2" />
                           )}
                         </button>
                       )

@@ -13,7 +13,7 @@ import { ScrapeFormState, LocationDataState } from '../types'
 export const useScrapeForm = () => {
   const router = useRouter()
   const { user, profile, credits } = useSupabase()
-  const { categories } = useScrapeData()
+  const { categories, dataTypes } = useScrapeData()
   
   // Form state
   const [formState, setFormState] = useState<ScrapeFormState>({
@@ -24,8 +24,8 @@ export const useScrapeForm = () => {
     selectedLocationPaths: [],
     selectedDataTypes: [],
     selectedRating: 'none',
-    extractSingleImage: false,
-    maxReviews: 0,
+    extractSingleImage: true, // Default to true (extract one image)
+    maxReviews: 10, // Default to 10 reviews
     estimatedResults: 0,
     isEstimating: false,
     isSubmitting: false
@@ -99,6 +99,7 @@ export const useScrapeForm = () => {
   }
 
   const handleDataTypeChange = (dataTypeId: string, checked: boolean) => {
+    console.log('handleDataTypeChange:', { dataTypeId, checked })
     if (checked) {
       updateFormState({ 
         selectedDataTypes: [...formState.selectedDataTypes, dataTypeId] 
@@ -108,6 +109,12 @@ export const useScrapeForm = () => {
         selectedDataTypes: formState.selectedDataTypes.filter(id => id !== dataTypeId) 
       })
     }
+  }
+  
+  // New function to handle bulk data type selections
+  const handleBulkDataTypeSelection = (selectedIds: string[]) => {
+    console.log('handleBulkDataTypeSelection:', { selectedIds })
+    updateFormState({ selectedDataTypes: selectedIds })
   }
 
   const handleEstimate = async () => {
@@ -149,7 +156,22 @@ export const useScrapeForm = () => {
       return total + 1 // Default to 1 for non-US or manual locations
     }, 0)
     
-    const estimatedCredits = Math.max(totalZipCodes * 8, 1) // Minimum 1 credit
+    // Calculate base estimated credits
+    let estimatedCredits = Math.max(totalZipCodes * 8, 1) // Minimum 1 credit
+    
+    // Calculate additional credits from selected data types with credits_increase
+    // Use dataTypes from the top-level hook call instead of calling useScrapeData() again
+    const additionalCredits = formState.selectedDataTypes.reduce((total, dataTypeId) => {
+      const dataType = dataTypes.find(dt => dt.id === dataTypeId)
+      if (dataType && dataType.credits_increase) {
+        // Multiply by the number of zip codes since credits are per record
+        return total + (dataType.credits_increase * totalZipCodes)
+      }
+      return total
+    }, 0)
+    
+    // Add additional credits to the estimated total
+    estimatedCredits += additionalCredits
     
     setTimeout(() => {
       updateFormState({
@@ -230,6 +252,7 @@ export const useScrapeForm = () => {
     locationError,
     updateFormState,
     handleDataTypeChange,
+    handleBulkDataTypeSelection,
     handleEstimate,
     handleStartScraping
   }

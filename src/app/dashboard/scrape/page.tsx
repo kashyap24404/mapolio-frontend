@@ -31,6 +31,7 @@ export default function ScrapePage() {
     locationError,
     updateFormState,
     handleDataTypeChange,
+    handleBulkDataTypeSelection,
     handleEstimate,
     handleStartScraping
   } = useScrapeForm()
@@ -65,6 +66,7 @@ export default function ScrapePage() {
             isLoading={scrapeDataLoading || authLoading}
             updateFormState={updateFormState}
             handleDataTypeChange={handleDataTypeChange}
+            handleBulkDataTypeSelection={handleBulkDataTypeSelection}
             handleEstimate={handleEstimate}
             handleStartScraping={handleStartScraping}
           />

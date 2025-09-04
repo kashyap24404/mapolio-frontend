@@ -15,7 +15,7 @@ import Link from 'next/link'
 
 export default function ResultsPage() {
   const router = useRouter()
-  const { user, profile } = useSupabase()
+  const { user, profile, loading: authLoading } = useSupabase()
   
   // Use the global tasks data context instead of local state
   const { 
@@ -74,11 +74,15 @@ export default function ResultsPage() {
     }
   }
 
-  if (!user || !profile) {
-    return <div>Please sign in to access this page.</div>
-  }
+  // Check authentication after loading completes
+  React.useEffect(() => {
+    if (!authLoading && !user) {
+      // Only redirect if we're sure the user is not authenticated
+      router.push('/auth/signin?redirect=' + encodeURIComponent(window.location.pathname))
+    }
+  }, [authLoading, user, router])
 
-  // Always render the page content, but show loading indicator within the content
+  // Always render the page content with appropriate loading states
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -111,7 +115,7 @@ export default function ResultsPage() {
               </div>
               
               {/* Show loading indicator as an overlay */}
-              {loading && (
+              {(loading || authLoading) && (
                 <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
                   <div className="animate-pulse space-y-4">
                     <div className="h-8 bg-muted rounded w-48"></div>
@@ -120,7 +124,7 @@ export default function ResultsPage() {
                 </div>
               )}
               
-              {error && (
+              {error && !authLoading && (
                 <Card className="mb-6">
                   <CardContent className="pt-6">
                     <div className="text-center text-destructive">
@@ -131,7 +135,7 @@ export default function ResultsPage() {
                 </Card>
               )}
 
-              {tasks.length === 0 && !error ? (
+              {tasks.length === 0 && !error && !authLoading ? (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">

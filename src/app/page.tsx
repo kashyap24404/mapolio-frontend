@@ -7,6 +7,7 @@ import UseCasesSection from '@/components/site/UseCasesSection';
 import PricingSection from '@/components/site/PricingSection';
 import FAQSection from '@/components/site/FAQSection';
 import CTASection from '@/components/site/CTASection';
+import { Footer } from '@/components/site/Footer';
 
 // Import HeroSection with dynamic import and disable SSR
 const HeroSection = dynamic(() => import('@/components/site/HeroSection'), { 
@@ -50,6 +51,7 @@ export default function Home() {
       <PricingSection />
       <FAQSection />
       <CTASection />
+      <Footer />
     </div>
   );
 }

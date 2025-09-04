@@ -16,7 +16,7 @@ import { useTasksData } from '@/contexts/TasksDataContext'
 
 export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
-  const { user, profile } = useSupabase()
+  const { user, profile, loading: authLoading } = useSupabase()
   const [taskId, setTaskId] = useState<string | null>(null)
   
   // Use the refactored useTaskDetail hook that now uses the global context
@@ -51,11 +51,15 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     document.body.removeChild(link)
   }
 
-  if (!user || !profile) {
-    return <div>Please sign in to access this page.</div>
-  }
+  // Check authentication after loading completes
+  useEffect(() => {
+    if (!authLoading && !user) {
+      // Only redirect if we're sure the user is not authenticated
+      router.push('/auth/signin?redirect=' + encodeURIComponent(window.location.pathname))
+    }
+  }, [authLoading, user, router])
 
-  // Always render the page content, but show loading indicator within the content
+  // Always render the page content with appropriate loading states
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -67,17 +71,17 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
           <div className="py-8 px-6">
             <div className="max-w-4xl mx-auto">
               {/* Show loading indicator as an overlay */}
-              {loading && !task && (
+              {(loading || authLoading) && !task && (
                 <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
                   <LoadingState />
                 </div>
               )}
               
-              {error && (
+              {error && !authLoading && (
                 <ErrorState error={error} />
               )}
 
-              {!task && !loading && (
+              {!task && !loading && !authLoading && (
                 <EmptyState />
               )}
 

@@ -13,6 +13,7 @@ export interface DataType {
   id: string
   label: string
   restricted_to_plans: string[]
+  credits_increase?: number
 }
 
 export interface Rating {

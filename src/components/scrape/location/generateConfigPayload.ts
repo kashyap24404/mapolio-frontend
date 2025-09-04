@@ -173,8 +173,8 @@ export function generateConfigPayload(
   selectedDataTypes: string[],
   selectedRating: string,
   country: string = 'US',
-  extractSingleImage: boolean = false,
-  maxReviews: number = 0
+  extractSingleImage: boolean = true, // Default to extracting one image
+  maxReviews: number = 10 // Default to 10 reviews
 ): ScrapingConfig {
   let locationRules: LocationRules = { base: [] }
   let totalSelectedZipCodes = 0
