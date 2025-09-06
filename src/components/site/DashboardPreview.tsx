@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import AnimatedBackground from '@/components/ui/animated-background';
 import { Loader2 } from 'lucide-react';
-import { useSupabase } from '@/lib/supabase-provider';
+import { useSupabase } from '@/lib/supabase/index';
 
 interface DashboardPreviewProps {
   imageSrc?: string;

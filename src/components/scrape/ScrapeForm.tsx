@@ -3,11 +3,11 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Search } from 'lucide-react'
-import BusinessCategorySection from './BusinessCategorySection'
-import LocationSection from './LocationSection'
-import DataFieldsSection from './DataFieldsSection'
-import AdvancedExtractionSection from './AdvancedExtractionSection'
-import RatingsSection from './RatingsSection'
+import BusinessCategorySection from './sections/BusinessCategorySection'
+import LocationSection from './sections/LocationSection'
+import DataFieldsSection from './sections/DataFieldsSection'
+import AdvancedExtractionSection from './sections/AdvancedExtractionSection'
+import RatingsSection from './sections/RatingsSection'
 import { Category, Country, DataType, Rating, LocationData } from './types'
 
 interface ScrapeFormProps {

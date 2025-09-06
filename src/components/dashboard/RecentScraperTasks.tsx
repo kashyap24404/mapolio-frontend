@@ -1,9 +1,15 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+// NOTE: This component is deprecated and should not be used in the dashboard
+// as per user preference for a simplified dashboard interface without the Recent Scraper Tasks section.
+// It is retained for potential future use or reference only.
+
+import React, { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { useSupabase } from '@/lib/supabase-provider'
+import { supabase } from '@/lib/supabase/client'
+import { useSupabase } from '@/lib/supabase/hooks'
+import { useActiveOnVisible } from '@/lib/supabase/hooks/usePageVisibility'
+import { useUserStats } from '@/contexts/UserStatsContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Clock, Search, CheckCircle, XCircle, Loader2 } from 'lucide-react'
@@ -56,56 +62,144 @@ const formatDate = (dateString: string): string => {
 const RecentScraperTasks: React.FC = () => {
   const router = useRouter()
   const { user } = useSupabase()
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [loading, setLoading] = useState(true)
+  const { transactions, loading: statsLoading, refreshStats } = useUserStats()
+  const { isActive, isVisible, justBecameVisible } = useActiveOnVisible({ pauseWhenHidden: true, resumeDelay: 2000 })
   const [error, setError] = useState<string | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
   
-  useEffect(() => {
-    const fetchRecentTasks = async () => {
-      try {
-        if (!user) return
-        
-        setLoading(true)
-        const { data, error } = await supabase
-          .from('recent_scraper_tasks')
-          .select('*')
-          .eq('user_id', user.id)
-          .limit(5)
-        
-        if (error) {
-          console.error('Error fetching recent tasks:', error)
-          setError('Failed to load recent tasks')
-        } else {
-          setTasks(data || [])
-          setError(null)
-        }
-      } catch (err) {
-        console.error('Unexpected error:', err)
-        setError('An unexpected error occurred')
-      } finally {
-        setLoading(false)
-      }
+  // Refs for managing subscription and preventing duplicate fetches
+  const subscriptionRef = useRef<any>(null)
+  const lastFetchTime = useRef<number>(0)
+  const isMountedRef = useRef(true)
+  const userIdRef = useRef<string | null>(null) // Track user ID changes
+  const FETCH_DEBOUNCE_MS = 5000 // 5 seconds minimum between fetches
+  
+  // Memoized fetch function to prevent unnecessary re-creations
+  const fetchRecentTasks = useCallback(async (force = false) => {
+    const now = Date.now()
+    
+    // Don't fetch if page is not visible and not forced
+    if (!force && !isActive) {
+      console.log('RecentScraperTasks: Skipping fetch - page not active')
+      return
     }
     
-    fetchRecentTasks()
+    // Prevent too frequent fetches unless forced
+    if (!force && now - lastFetchTime.current < FETCH_DEBOUNCE_MS) {
+      console.log('RecentScraperTasks: Skipping fetch - too recent')
+      return
+    }
     
-    // Set up subscription for real-time updates
-    const tasksSubscription = supabase
-      .channel('recent_tasks_changes')
+    if (!user || !isMountedRef.current) {
+      if (isMountedRef.current) {
+        // setLoading(false)
+      }
+      return
+    }
+    
+    try {
+      setError(null)
+      lastFetchTime.current = now
+      
+      console.log('RecentScraperTasks: Fetching tasks for user:', user.id)
+      
+      // Refresh stats from the context
+      await refreshStats()
+    } catch (err) {
+      if (!isMountedRef.current) return // Component unmounted during fetch
+      console.error('Unexpected error:', err)
+      setError('An unexpected error occurred while loading tasks')
+    }
+  }, [user?.id, isActive, refreshStats]) // Only depend on user.id, not the entire user object
+  
+  // Setup subscription and initial fetch
+  React.useEffect(() => {
+    if (!user) {
+      userIdRef.current = null
+      return
+    }
+    
+    // Check if user has actually changed to prevent unnecessary re-initialization
+    if (userIdRef.current === user.id && subscriptionRef.current) {
+      console.log('RecentScraperTasks: User unchanged, skipping re-initialization')
+      // But still fetch tasks if we don't have any
+      if (transactions.length === 0) {
+        fetchRecentTasks(true) // Force fetch if no tasks
+      }
+      return
+    }
+    
+    // Update user ID reference
+    userIdRef.current = user.id
+    
+    // Clean up existing subscription before creating new one
+    if (subscriptionRef.current) {
+      console.log('RecentScraperTasks: Cleaning up existing subscription')
+      supabase.removeChannel(subscriptionRef.current)
+      subscriptionRef.current = null
+    }
+    
+    // Initial fetch
+    fetchRecentTasks(true) // Force initial fetch
+    
+    // Set up new subscription
+    console.log('RecentScraperTasks: Setting up subscription')
+    subscriptionRef.current = supabase
+      .channel(`recent_tasks_changes_${user.id}`)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'scraper_task'
-      }, () => {
-        fetchRecentTasks()
+        table: 'scraper_task',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('RecentScraperTasks: Real-time update received:', payload.eventType)
+        
+        // Handle real-time updates without full re-fetch when possible
+        if (payload.eventType === 'INSERT' && payload.new) {
+          // Refresh stats to get the new task
+          refreshStats()
+        } else if (payload.eventType === 'UPDATE' && payload.new) {
+          // Refresh stats to get the updated task
+          refreshStats()
+        } else if (payload.eventType === 'DELETE' && payload.old) {
+          // Refresh stats to remove the deleted task
+          refreshStats()
+        } else {
+          // For other events, do a throttled fetch only if page is active
+          if (isActive) {
+            fetchRecentTasks()
+          }
+        }
       })
-      .subscribe()
+      .subscribe((status) => {
+        console.log('RecentScraperTasks: Subscription status:', status)
+      })
     
+    // Cleanup function
     return () => {
-      supabase.removeChannel(tasksSubscription)
+      if (subscriptionRef.current) {
+        console.log('RecentScraperTasks: Cleaning up subscription on unmount')
+        supabase.removeChannel(subscriptionRef.current)
+        subscriptionRef.current = null
+      }
     }
-  }, [user])
+  }, [user?.id, transactions.length, refreshStats]) // Add transactions.length to dependencies
+  
+  // Handle page visibility changes for refresh when returning to tab
+  React.useEffect(() => {
+    // If the page just became visible and we have a user, refresh the tasks
+    if (justBecameVisible && user && isActive) {
+      console.log('RecentScraperTasks: Page became visible, refreshing tasks')
+      fetchRecentTasks(true) // Force refresh when page becomes visible
+    }
+  }, [justBecameVisible, user?.id, isActive, fetchRecentTasks])
+  
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
   
   const handleViewResults = (taskId: string) => {
     setIsNavigating(true)
@@ -117,6 +211,9 @@ const RecentScraperTasks: React.FC = () => {
     router.push('/dashboard/scrape')
   }
   
+  // Get the 5 most recent transactions
+  const recentTasks = transactions.slice(0, 5)
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -126,20 +223,23 @@ const RecentScraperTasks: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {loading ? (
+        {statsLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : error ? (
           <div className="text-center py-6">
             <p className="text-sm text-red-500 mb-4">{error}</p>
-            <Button size="sm" onClick={() => setLoading(true)}>
+            <Button size="sm" onClick={() => {
+              setError(null)
+              fetchRecentTasks(true) // Force retry
+            }}>
               Retry
             </Button>
           </div>
-        ) : tasks.length > 0 ? (
+        ) : recentTasks.length > 0 ? (
           <div className="space-y-4">
-            {tasks.map((task) => (
+            {recentTasks.map((task) => (
               <div key={task.id} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
                 <div className="flex items-start space-x-3">
                   <div className="pt-0.5">{getStatusIcon(task.status)}</div>

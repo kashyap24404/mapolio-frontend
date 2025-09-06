@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { useSupabase } from '@/lib/supabase-provider'
+import { useSupabase } from '@/lib/supabase/index'
 import { User, CreditCard, Settings, LogOut, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

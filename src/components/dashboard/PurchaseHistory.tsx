@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { useSupabase } from '@/lib/supabase-provider'
-import { creditService } from '@/lib/supabase-services'
+import React from 'react'
+import { useSupabase } from '@/lib/supabase/index'
+import { useUserStats } from '@/contexts/UserStatsContext'
 import {
   Table,
   TableBody,
@@ -14,50 +14,9 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2 } from 'lucide-react'
 
-interface Transaction {
-  id: string
-  credits_purchased: number
-  amount_paid_cents: number
-  payment_gateway: string
-  status: string
-  created_at: string
-}
-
 const PurchaseHistory = () => {
   const { user } = useSupabase()
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    async function loadTransactions() {
-      if (!user) return
-
-      try {
-        setLoading(true)
-        const { transactions: data, error } = await creditService.getPurchaseHistory(user.id)
-        
-        if (error) {
-          throw error
-        }
-        
-        if (data) {
-          setTransactions(data)
-        }
-      } catch (err) {
-        console.error('Error loading transactions:', err)
-        setError('Failed to load purchase history')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadTransactions()
-  }, [user])
-
-  if (!user) {
-    return <div>Please sign in to view your purchase history</div>
-  }
+  const { purchaseHistory, loading, error } = useUserStats()
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -71,6 +30,10 @@ const PurchaseHistory = () => {
 
   const formatCurrency = (cents: number) => {
     return `$${(cents / 100).toFixed(2)}`
+  }
+
+  if (!user) {
+    return <div>Please sign in to view your purchase history</div>
   }
 
   return (
@@ -89,7 +52,7 @@ const PurchaseHistory = () => {
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error}
           </div>
-        ) : transactions.length === 0 ? (
+        ) : purchaseHistory.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             No purchase history found
           </div>
@@ -105,7 +68,7 @@ const PurchaseHistory = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.map((transaction) => (
+              {purchaseHistory.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell>{formatDate(transaction.created_at)}</TableCell>
                   <TableCell>{transaction.credits_purchased.toLocaleString()}</TableCell>

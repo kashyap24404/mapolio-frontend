@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
 import PurchaseHistory from '@/components/dashboard/PurchaseHistory'
-import { useSupabase } from '@/lib/supabase-provider'
+import { useSupabase } from '@/lib/supabase/index'
 
 export default function TransactionsPage() {
   const { user, profile, credits, loading: authLoading } = useSupabase()

@@ -4,27 +4,39 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
-import { useSupabase } from '@/lib/supabase-provider'
-import { useTasksData } from '@/contexts/TasksDataContext'
+import { useSupabase } from '@/lib/supabase/index'
+import { useUserStats } from '@/contexts/UserStatsContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { FileText, Search, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
+import { ResultsSkeleton } from '@/components/dashboard/ResultsSkeleton'
 
 export default function ResultsPage() {
   const router = useRouter()
   const { user, profile, loading: authLoading } = useSupabase()
   
-  // Use the global tasks data context instead of local state
+  // Use the global user stats context instead of separate tasks context
   const { 
     tasks, 
     loading, 
     error, 
-    refreshTasks,
+    refreshStats: refreshTasks,
     subscriptionStatus
-  } = useTasksData()
+  } = useUserStats()
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('ResultsPage: State update', { 
+      tasksCount: tasks.length, 
+      loading, 
+      error, 
+      subscriptionStatus,
+      authLoading 
+    })
+  }, [tasks.length, loading, error, subscriptionStatus, authLoading])
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -76,8 +88,8 @@ export default function ResultsPage() {
 
   // Check authentication after loading completes
   React.useEffect(() => {
+    // Only redirect if we're sure the user is not authenticated and auth loading is complete
     if (!authLoading && !user) {
-      // Only redirect if we're sure the user is not authenticated
       router.push('/auth/signin?redirect=' + encodeURIComponent(window.location.pathname))
     }
   }, [authLoading, user, router])
@@ -114,52 +126,13 @@ export default function ResultsPage() {
                 </div>
               </div>
               
-              {/* Show loading indicator as an overlay */}
-              {(loading || authLoading) && (
-                <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-8 bg-muted rounded w-48"></div>
-                    <div className="h-64 bg-muted rounded"></div>
-                  </div>
-                </div>
+              {/* Show loading skeleton only when actually loading data */}
+              {loading && (
+                <ResultsSkeleton />
               )}
               
-              {error && !authLoading && (
-                <Card className="mb-6">
-                  <CardContent className="pt-6">
-                    <div className="text-center text-destructive">
-                      <XCircle className="h-8 w-8 mx-auto mb-2" />
-                      <p>Error loading tasks: {error}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {tasks.length === 0 && !error && !authLoading ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <FileText className="h-5 w-5 mr-2" />
-                      Recent Results
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-12">
-                      <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-foreground mb-2">No results yet</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Start your first scraping job to see results here.
-                      </p>
-                      <Link href="/dashboard/scrape">
-                        <Button>
-                          <Search className="h-4 w-4 mr-2" />
-                          Start Scraping
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
+              {/* Show content when data is available, regardless of auth loading state */}
+              {!loading && !error && tasks.length > 0 && (
                 <div className="space-y-4">
                   {tasks.map((task) => (
                     <Link key={task.id} href={`/dashboard/results/${task.id}`} className="block">
@@ -227,6 +200,44 @@ export default function ResultsPage() {
                     </Link>
                   ))}
                 </div>
+              )}
+              
+              {error && (
+                <Card className="mb-6">
+                  <CardContent className="pt-6">
+                    <div className="text-center text-destructive">
+                      <XCircle className="h-8 w-8 mx-auto mb-2" />
+                      <p>Error loading tasks: {error}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Show empty state when no tasks */}
+              {!loading && !error && tasks.length === 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <FileText className="h-5 w-5 mr-2" />
+                      Recent Results
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-12">
+                      <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">No results yet</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Start your first scraping job to see results here.
+                      </p>
+                      <Link href="/dashboard/scrape">
+                        <Button>
+                          <Search className="h-4 w-4 mr-2" />
+                          Start Scraping
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
           </div>

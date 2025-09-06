@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { useSupabase } from '@/lib/supabase-provider'
+import { supabase } from '@/lib/supabase/client'
+import { useSupabase } from '@/lib/supabase/hooks'
 import { useScrapeData } from '@/contexts/ScrapeDataContext'
-import { ScrapingService } from '@/components/scrape/scrapingService'
+import { ScrapingService } from '@/components/scrape/services/scrapingService'
 import { generateConfigPayload } from '@/components/scrape/location/generateConfigPayload'
 import { LocationData } from '@/components/scrape/types'
 import { ScrapeFormState, LocationDataState } from '../types'

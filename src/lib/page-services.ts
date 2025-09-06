@@ -1,31 +1,7 @@
-import { supabase } from './supabase'
+import { supabase } from './supabase/client'
 import type { Page } from './types/pages'
 import type { PostgrestSingleResponse, PostgrestResponse } from '@supabase/supabase-js'
-
-// Add a timeout wrapper for fetch requests with retry mechanism
-const withTimeoutAndRetry = async <T>(fn: () => Promise<T>, timeoutMs: number = 30000, retries: number = 3): Promise<T> => {
-  let lastError: any;
-  
-  for (let i = 0; i < retries; i++) {
-    try {
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
-      );
-      const result = await Promise.race([fn(), timeoutPromise]);
-      return result;
-    } catch (error) {
-      lastError = error;
-      console.warn(`Attempt ${i + 1} failed:`, (error as Error).message || error);
-      
-      // Wait before retrying (exponential backoff)
-      if (i < retries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
-      }
-    }
-  }
-  
-  throw lastError;
-};
+import { withTimeoutAndRetry } from './services/base-service'
 
 export const pageService = {
   /**
@@ -46,8 +22,9 @@ export const pageService = {
             .single();
           return response;
         },
-        30000, // 30 second timeout
-        3 // 3 retries
+        60000, // 60 second timeout
+        3, // 3 retries
+        `page-by-slug-${slug}` // unique key for this request
       );
 
       if (result.error) {
@@ -78,8 +55,9 @@ export const pageService = {
             .order('title', { ascending: true });
           return response;
         },
-        30000, // 30 second timeout
-        3 // 3 retries
+        60000, // 60 second timeout
+        3, // 3 retries
+        'all-published-pages' // unique key for this request
       );
 
       if (result.error) {

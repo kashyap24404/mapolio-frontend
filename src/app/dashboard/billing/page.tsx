@@ -4,12 +4,13 @@ import React from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
-import { useSupabase } from '@/lib/supabase-provider'
+import { useSupabase } from '@/lib/supabase/index'
+import { useUserStats } from '@/contexts/UserStatsContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CreditCard, Plus } from 'lucide-react'
+import { CreditCard, Plus, Loader2 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
-import { scraperTaskService } from '@/lib/supabase-services'
 import { 
   Table, 
   TableBody, 
@@ -29,11 +30,10 @@ interface ScraperTask {
 
 export default function BillingPage() {
   const { user, profile, credits, pricingPlan, loading: authLoading } = useSupabase()
-  const [tasks, setTasks] = React.useState<ScraperTask[]>([])
-  const [tasksLoading, setTasksLoading] = React.useState(true)
+  const { transactions, loading: transactionsLoading } = useUserStats()
+  const router = useRouter()
 
   // Check authentication after loading completes
-  const router = useRouter()
   React.useEffect(() => {
     if (!authLoading && !user) {
       // Only redirect if we're sure the user is not authenticated
@@ -41,31 +41,10 @@ export default function BillingPage() {
     }
   }, [authLoading, user, router])
 
-  // Fetch completed scraper tasks
-  React.useEffect(() => {
-    if (user?.id) {
-      const fetchTasks = async () => {
-        setTasksLoading(true)
-        try {
-          const { tasks, error } = await scraperTaskService.getCompletedTasks(user.id)
-          if (!error && tasks) {
-            setTasks(tasks)
-          }
-        } catch (error) {
-          console.error('Error fetching tasks:', error)
-        } finally {
-          setTasksLoading(false)
-        }
-      }
-
-      fetchTasks()
-    }
-  }, [user?.id])
-
   // Use dynamic values from pricing plan or fallback to defaults
-  const pricePerCredit = pricingPlan?.price_per_credit || 0.003;
-  const minPurchaseUsd = pricingPlan?.min_purchase_usd || 9;
-  const creditsPerDollar = Math.floor(1 / pricePerCredit);
+  const pricePerCredit = pricingPlan?.price_per_credit || 0.003
+  const minPurchaseUsd = pricingPlan?.min_purchase_usd || 9
+  const creditsPerDollar = Math.floor(1 / pricePerCredit)
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -123,7 +102,7 @@ export default function BillingPage() {
                           </div>
                         )}
                       </div>
-                      <Link href="/pricing">
+                      <Link href="/dashboard/pricing">
                         <Button className="bg-foreground text-background hover:bg-foreground/90">
                           <Plus className="h-4 w-4 mr-2" />
                           Buy Credits
@@ -166,11 +145,19 @@ export default function BillingPage() {
                     <CardTitle>Usage History</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {tasksLoading ? (
-                      <div className="flex justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+                    {transactionsLoading ? (
+                      <div className="space-y-4">
+                        {Array.from({ length: 3 }).map((_, index) => (
+                          <div key={index} className="flex items-center space-x-4">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-4 w-16" />
+                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className="h-4 w-16" />
+                          </div>
+                        ))}
                       </div>
-                    ) : tasks.length > 0 ? (
+                    ) : transactions.length > 0 ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -182,7 +169,7 @@ export default function BillingPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {tasks.map((task) => (
+                          {transactions.map((task: ScraperTask) => (
                             <TableRow key={task.id}>
                               <TableCell className="font-medium">
                                 {formatDate(task.created_at)}

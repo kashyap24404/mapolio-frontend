@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Check } from 'lucide-react';
-import { useSupabase } from '@/lib/supabase-provider';
+import { useSupabase } from '@/lib/supabase/index';
 
 const features = [
   "CSV & Excel export",

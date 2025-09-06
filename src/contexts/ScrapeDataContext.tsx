@@ -2,9 +2,10 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 // Fix the import to use the correct supabase client
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { Category, Country, DataType, Rating } from '@/components/scrape/types';
 import { PostgrestError } from '@supabase/supabase-js';
+import { withTimeoutAndRetry } from '@/lib/services/base-service';
 
 interface ScrapeDataContextType {
   categories: Category[];
@@ -28,124 +29,117 @@ export const ScrapeDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Helper function to fetch data with retries and proper timeout
-  const fetchWithRetry = async <T,>(
-    fetchFn: () => Promise<{ data: T[] | null; error: PostgrestError | null }>,
-    tableName: string,
-    maxRetries: number = 3,
-    retryDelay: number = 2000,
-    timeoutMs: number = 30000
-  ): Promise<{ data: T[] | null; error: PostgrestError | null }> => {
-    let retries = 0;
-
-    while (retries < maxRetries) {
-      try {
-        // Create a timeout promise
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`${tableName} fetch timeout after ${timeoutMs/1000} seconds`)), timeoutMs)
-        );
-
-        // Execute the fetch function and race it against the timeout
-        const result = await Promise.race([
-          fetchFn(),
-          timeoutPromise
-        ]);
-
-        // If we get here, the fetch was successful
-        return result;
-      } catch (err) {
-        retries++;
-        console.log(`Retry ${retries}/${maxRetries} for ${tableName} after error:`, err);
-
-        // If we've used all retries, throw the error
-        if (retries >= maxRetries) {
-          throw err;
-        }
-
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-      }
-    }
-
-    // This should never be reached due to the throw in the while loop,
-    // but TypeScript needs it for return type consistency
-    throw new Error(`Failed to fetch ${tableName} after ${maxRetries} retries`);
-  };
-
   const fetchData = async () => {
     try {
       console.log('ScrapeDataContext: Fetching data...');
+      setLoading(true);
+      setError(null);
       
       // Create async fetch functions that properly await the Supabase queries
+      // Use the enhanced withTimeoutAndRetry with unique keys for each data type
       const fetchCategories = async (): Promise<{ data: Category[] | null; error: PostgrestError | null }> => {
-        const { data, error } = await supabase.from('scraper_categories').select('*');
-        return { data, error };
+        return await withTimeoutAndRetry(
+          async () => {
+            const { data, error } = await supabase.from('scraper_categories').select('*');
+            return { data, error };
+          },
+          60000, // 60 second timeout
+          3, // 3 retries
+          'scraper_categories' // unique key for this request type
+        );
       };
       
       const fetchCountries = async (): Promise<{ data: Country[] | null; error: PostgrestError | null }> => {
-        const { data, error } = await supabase.from('scraper_countries').select('*');
-        return { data, error };
+        return await withTimeoutAndRetry(
+          async () => {
+            const { data, error } = await supabase.from('scraper_countries').select('*');
+            return { data, error };
+          },
+          60000,
+          3,
+          'scraper_countries'
+        );
       };
       
       const fetchDataTypes = async (): Promise<{ data: DataType[] | null; error: PostgrestError | null }> => {
-        const { data, error } = await supabase.from('scraper_data_types').select('*');
-        return { data, error };
+        return await withTimeoutAndRetry(
+          async () => {
+            const { data, error } = await supabase.from('scraper_data_types').select('*');
+            return { data, error };
+          },
+          60000,
+          3,
+          'scraper_data_types'
+        );
       };
       
       const fetchRatings = async (): Promise<{ data: Rating[] | null; error: PostgrestError | null }> => {
-        const { data, error } = await supabase.from('scraper_ratings').select('*');
-        return { data, error };
+        return await withTimeoutAndRetry(
+          async () => {
+            const { data, error } = await supabase.from('scraper_ratings').select('*');
+            return { data, error };
+          },
+          60000,
+          3,
+          'scraper_ratings'
+        );
       };
 
-      // Fetch all data types in parallel with individual error handling
-      const [categoriesRes, countriesRes, dataTypesRes, ratingsRes] = await Promise.all([
-        fetchWithRetry<Category>(fetchCategories, 'categories')
-          .catch(err => {
-            console.error('Categories fetch failed:', err);
-            return { data: null, error: err };
-          }),
-        
-        fetchWithRetry<Country>(fetchCountries, 'countries')
-          .catch(err => {
-            console.error('Countries fetch failed:', err);
-            return { data: null, error: err };
-          }),
-        
-        fetchWithRetry<DataType>(fetchDataTypes, 'data types')
-          .catch(err => {
-            console.error('Data types fetch failed:', err);
-            return { data: null, error: err };
-          }),
-        
-        fetchWithRetry<Rating>(fetchRatings, 'ratings')
-          .catch(err => {
-            console.error('Ratings fetch failed:', err);
-            return { data: null, error: err };
-          })
-      ]);
+      // Fetch all data types sequentially to avoid overwhelming the connection
+      // This prevents connection pool exhaustion and reduces timeout probability
+      let categoriesRes: { data: Category[] | null; error: any } = { data: [], error: null };
+      let countriesRes: { data: Country[] | null; error: any } = { data: [], error: null };
+      let dataTypesRes: { data: DataType[] | null; error: any } = { data: [], error: null };
+      let ratingsRes: { data: Rating[] | null; error: any } = { data: [], error: null };
 
-      // Handle errors individually
-      if (categoriesRes.error && !(categoriesRes.error instanceof Error && categoriesRes.error.message.includes('timeout'))) {
-        console.error('Categories error:', categoriesRes.error.message);
+      try {
+        categoriesRes = await fetchCategories();
+      } catch (err) {
+        console.error('Categories fetch failed:', err);
+        categoriesRes = { data: [], error: err };
       }
-      
-      if (countriesRes.error && !(countriesRes.error instanceof Error && countriesRes.error.message.includes('timeout'))) {
-        console.error('Countries error:', countriesRes.error.message);
+
+      try {
+        countriesRes = await fetchCountries();
+      } catch (err) {
+        console.error('Countries fetch failed:', err);
+        countriesRes = { data: [], error: err };
       }
-      
-      if (dataTypesRes.error && !(dataTypesRes.error instanceof Error && dataTypesRes.error.message.includes('timeout'))) {
-        console.error('Data types error:', dataTypesRes.error.message);
+
+      try {
+        dataTypesRes = await fetchDataTypes();
+      } catch (err) {
+        console.error('Data types fetch failed:', err);
+        dataTypesRes = { data: [], error: err };
       }
-      
-      if (ratingsRes.error && !(ratingsRes.error instanceof Error && ratingsRes.error.message.includes('timeout'))) {
-        console.error('Ratings error:', ratingsRes.error.message);
+
+      try {
+        ratingsRes = await fetchRatings();
+      } catch (err) {
+        console.error('Ratings fetch failed:', err);
+        ratingsRes = { data: [], error: err };
       }
+
+      // Collect all errors for reporting
+      const errors: string[] = [];
+      if (categoriesRes.error) errors.push(`Categories: ${categoriesRes.error.message || 'Unknown error'}`);
+      if (countriesRes.error) errors.push(`Countries: ${countriesRes.error.message || 'Unknown error'}`);
+      if (dataTypesRes.error) errors.push(`Data types: ${dataTypesRes.error.message || 'Unknown error'}`);
+      if (ratingsRes.error) errors.push(`Ratings: ${ratingsRes.error.message || 'Unknown error'}`);
 
       // Update state with fetched data (use empty arrays if data is null)
       setCategories(categoriesRes.data || []);
       setCountries(countriesRes.data || []);
       setDataTypes(dataTypesRes.data || []);
       setRatings(ratingsRes.data || []);
+
+      // Set error if any fetches failed, but don't prevent the component from functioning
+      if (errors.length > 0) {
+        setError(`Some data failed to load: ${errors.join(', ')}`);
+        console.warn('Partial data loading failures:', errors);
+      } else {
+        setError(null);
+      }
 
       console.log('ScrapeDataContext: Data fetched successfully');
     } catch (err) {
@@ -168,8 +162,6 @@ export const ScrapeDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Public method to refresh data
   const refreshData = () => {
-    setLoading(true);
-    setError(null);
     fetchData();
   };
 

@@ -2,7 +2,7 @@
 
 import React from 'react'
 import ScrapeForm from '@/components/scrape/ScrapeForm'
-import ScrapeActions from '@/components/scrape/ScrapeActions'
+import ScrapeActions from '@/components/scrape/actions/ScrapeActions'
 import { ContentLoadingState } from './LoadingStates'
 import { ScrapeFormState, LocationDataState } from '../types'
 import { Category, Country, DataType, Rating } from '@/components/scrape/types'

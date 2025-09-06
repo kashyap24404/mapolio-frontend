@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { scraperService } from '@/lib/supabase-services'
-import { supabase } from '@/lib/supabase'
+import { ScrapingDataService } from './services/scrapingDataService'
 import { Category, Country, DataType, Rating, LocationData } from './types'
 
 export function useScrapeData(user: any) {
@@ -62,13 +61,7 @@ export function useScrapeData(user: any) {
   }, [categories.length, countries.length, dataTypes.length, ratings.length, loadingCategories, loadingCountries, loadingDataTypes, loadingRatings])
 
   const testDatabaseConnection = async () => {
-    try {
-      console.log('Testing database connection...')
-      const { data, error } = await supabase.from('scraper_categories').select('count', { count: 'exact' })
-      console.log('Database test result:', { data, error, count: data?.length })
-    } catch (err) {
-      console.error('Database connection test failed:', err)
-    }
+    return await ScrapingDataService.testDatabaseConnection()
   }
 
   const loadCategories = async () => {
@@ -76,13 +69,10 @@ export function useScrapeData(user: any) {
     
     setLoadingCategories(true)
     try {
-      console.log('Loading categories...')
-      const { categories: data, error } = await scraperService.getCategories()
-      console.log('Categories response:', { data, error, dataLength: data?.length })
+      const { data, error } = await ScrapingDataService.loadCategories()
       if (!error && data) {
         setCategories(data)
         setHasLoadedCategories(true)
-        console.log('Categories set successfully:', data.length, 'items')
       } else {
         console.error('Failed to load categories:', error)
       }
@@ -90,7 +80,6 @@ export function useScrapeData(user: any) {
       console.error('Error loading categories:', err)
     }
     setLoadingCategories(false)
-    console.log('Loading categories finished')
   }
 
   const loadCountries = async () => {
@@ -98,13 +87,10 @@ export function useScrapeData(user: any) {
     
     setLoadingCountries(true)
     try {
-      console.log('Loading countries...')
-      const { countries: data, error } = await scraperService.getCountries()
-      console.log('Countries response:', { data, error })
+      const { data, error } = await ScrapingDataService.loadCountries()
       if (!error && data) {
         setCountries(data)
         setHasLoadedCountries(true)
-        console.log('Countries loaded successfully:', data.length)
       } else {
         console.error('Failed to load countries:', error)
       }
@@ -119,13 +105,10 @@ export function useScrapeData(user: any) {
     
     setLoadingDataTypes(true)
     try {
-      console.log('Loading data types...')
-      const { dataTypes: data, error } = await scraperService.getDataTypes()
-      console.log('Data types response:', { data, error })
+      const { data, error } = await ScrapingDataService.loadDataTypes()
       if (!error && data) {
         setDataTypes(data)
         setHasLoadedDataTypes(true)
-        console.log('Data types loaded successfully:', data.length)
       } else {
         console.error('Failed to load data types:', error)
       }
@@ -140,13 +123,10 @@ export function useScrapeData(user: any) {
     
     setLoadingRatings(true)
     try {
-      console.log('Loading ratings...')
-      const { ratings: data, error } = await scraperService.getRatings()
-      console.log('Ratings response:', { data, error })
+      const { data, error } = await ScrapingDataService.loadRatings()
       if (!error && data) {
         setRatings(data)
         setHasLoadedRatings(true)
-        console.log('Ratings loaded successfully:', data.length)
       } else {
         console.error('Failed to load ratings:', error)
       }
@@ -159,10 +139,8 @@ export function useScrapeData(user: any) {
   const loadLocationData = useCallback(async () => {
     setLoadingLocationData(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_LOCATION_API_URL || 'http://localhost:4242/api/states/nested'
-      const response = await fetch(apiUrl)
-      const data: LocationData = await response.json()
-      if (data.success) {
+      const { data, error } = await ScrapingDataService.loadLocationData()
+      if (!error && data) {
         setLocationData(data)
       }
     } catch (error) {
@@ -182,6 +160,12 @@ export function useScrapeData(user: any) {
     loadingDataTypes,
     loadingRatings,
     loadingLocationData,
-    loadLocationData
+    loadLocationData,
+    // Expose individual loading functions for more granular control
+    loadCategories,
+    loadCountries,
+    loadDataTypes,
+    loadRatings,
+    testDatabaseConnection
   }
 }

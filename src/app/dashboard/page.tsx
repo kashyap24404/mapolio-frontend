@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { useRouter } from 'next/navigation'
-import { useSupabase } from '@/lib/supabase-provider'
+import { useSupabase } from '@/lib/supabase/index'
 import DashboardGrid from '@/components/dashboard/DashboardGrid'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'

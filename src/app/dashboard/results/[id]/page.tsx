@@ -4,15 +4,16 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
-import { useSupabase } from '@/lib/supabase-provider'
+import { useSupabase } from '@/lib/supabase/index'
 import { 
   LoadingState,
   ErrorState,
   EmptyState,
   TaskDetailContent
 } from './components'
+import { TaskDetailSkeleton } from '@/components/dashboard/ResultsSkeleton'
 import { useTaskDetail } from './hooks/useTaskDetail'
-import { useTasksData } from '@/contexts/TasksDataContext'
+import { useUserStats } from '@/contexts/UserStatsContext'
 
 export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -23,7 +24,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   const { task, loading, error } = useTaskDetail(user, taskId)
   
   // Get the refresh function from the global context
-  const { refreshTasks } = useTasksData()
+  const { refreshStats: refreshTasks } = useUserStats()
 
   // Unwrap the params promise
   useEffect(() => {
@@ -70,18 +71,16 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         <main className="flex-1 ml-64">
           <div className="py-8 px-6">
             <div className="max-w-4xl mx-auto">
-              {/* Show loading indicator as an overlay */}
-              {(loading || authLoading) && !task && (
-                <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
-                  <LoadingState />
-                </div>
+              {/* Show loading skeleton */}
+              {loading && !task && (
+                <TaskDetailSkeleton />
               )}
               
-              {error && !authLoading && (
+              {error && (
                 <ErrorState error={error} />
               )}
 
-              {!task && !loading && !authLoading && (
+              {!task && !loading && (
                 <EmptyState />
               )}
 

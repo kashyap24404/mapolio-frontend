@@ -5,7 +5,7 @@ import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useSupabase } from '@/lib/supabase-provider'
+import { useSupabase } from '@/lib/supabase/index'
 
 export default function TestSessionPage() {
   const [sessionInfo, setSessionInfo] = useState<any>(null)

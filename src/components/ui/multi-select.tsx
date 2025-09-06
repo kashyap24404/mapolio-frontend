@@ -1,16 +1,12 @@
 'use client'
 
-import React, { useState, useRef, useEffect, ReactNode } from 'react'
+import React from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Check, ChevronDown, X } from 'lucide-react'
-
-export interface MultiSelectOption {
-  id: string
-  label: string | ReactNode
-}
+import { useMultiSelect, MultiSelectOption } from '@/components/ui/multi-select/useMultiSelect'
 
 interface MultiSelectProps {
   options: MultiSelectOption[]
@@ -35,32 +31,24 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   maxDisplayItems = 3,
   className
 }) => {
-  const [isClient, setIsClient] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-
-    // Only attach the event listener when isClient is true
-    if (isClient) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-    
-    // Return a cleanup function even when not attaching listener
-    return () => {}
-  }, [isClient])
+  const {
+    isClient,
+    isOpen,
+    setIsOpen,
+    searchTerm,
+    setSearchTerm,
+    dropdownRef,
+    filteredOptions,
+    selectedOptions,
+    toggleOption,
+    clearAll,
+    selectAll,
+    getDisplayText
+  } = useMultiSelect({
+    options,
+    selectedValues,
+    onSelectionChange
+  })
 
   // Render the component content
   const renderContent = () => {
@@ -71,60 +59,6 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
           <div className="h-10 bg-muted rounded border"></div>
         </div>
       )
-    }
-
-    // Filter options based on search term
-    const filteredOptions = options.filter(option => {
-      if (typeof option.label === 'string') {
-        return option.label.toLowerCase().includes((searchTerm || '').toLowerCase());
-      }
-      // For React nodes, use a simpler approach to avoid TypeScript errors
-      // Just include all React node items when there's no search term
-      // When there is a search term, exclude them unless they match some basic criteria
-      if (!searchTerm) {
-        return true; // Include all items when not searching
-      }
-      
-      // Basic filtering for React nodes - match by option ID if it contains the search term
-      return option.id.toLowerCase().includes(searchTerm.toLowerCase());
-    })
-
-    // Get selected options for display
-    const selectedOptions = options.filter(option => selectedValues.includes(option.id))
-
-    // Toggle option selection
-    const toggleOption = (optionId: string) => {
-      const isSelected = selectedValues.includes(optionId)
-      if (isSelected) {
-        onSelectionChange(selectedValues.filter(id => id !== optionId))
-      } else {
-        onSelectionChange([...selectedValues, optionId])
-      }
-    }
-
-    // Clear all selections
-    const clearAll = () => {
-      console.log('Clear All clicked')
-      // Simply clear all selections
-      onSelectionChange([])
-    }
-
-    // Select all filtered options
-    const selectAll = () => {
-      console.log('Select All clicked', { allOptions: options.length })
-      // Get all option IDs from the options array
-      const allOptionIds = options.map(option => option.id)
-      onSelectionChange(allOptionIds)
-    }
-
-    // Format display text
-    const getDisplayText = () => {
-      if (selectedOptions.length === 0) {
-        return placeholder
-      }
-      
-      // For simplicity, just show the number of selected items
-      return `${selectedOptions.length} item${selectedOptions.length !== 1 ? 's' : ''} selected`;
     }
 
     return (
@@ -142,7 +76,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
           onClick={() => setIsOpen(!isOpen)}
         >
           <span className="truncate flex-1 text-sm">
-            {loading ? "Loading..." : getDisplayText()}
+            {loading ? "Loading..." : getDisplayText(placeholder)}
           </span>
           <ChevronDown className={cn(
             "h-4 w-4 ml-2 shrink-0 transition-transform duration-200",

@@ -2,8 +2,8 @@
 
 import React, { useEffect } from 'react';
 import { ScrapeDataProvider } from '@/contexts/ScrapeDataContext';
-import { TasksDataProvider } from '@/contexts/TasksDataContext';
-import { useSupabase } from '@/lib/supabase-provider';
+import { UserStatsProvider } from '@/contexts/UserStatsContext';
+import { useSupabase } from '@/lib/supabase/index';
 import { useRouter, usePathname } from 'next/navigation';
 
 export default function DashboardLayout({
@@ -29,9 +29,9 @@ export default function DashboardLayout({
 
   return (
     <ScrapeDataProvider>
-      <TasksDataProvider>
+      <UserStatsProvider>
         {children}
-      </TasksDataProvider>
+      </UserStatsProvider>
     </ScrapeDataProvider>
   );
 }

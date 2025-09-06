@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
-import { useSupabase } from '@/lib/supabase-provider'
+import { useSupabase } from '@/lib/supabase/index'
 import { useScrapeData } from '@/contexts/ScrapeDataContext'
 import { useScrapeForm } from './hooks/useScrapeForm'
 import { ErrorState } from './components/LoadingStates'

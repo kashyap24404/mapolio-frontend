@@ -3,14 +3,13 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { ChevronDown, MapPin, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { LocationData } from './types'
-import { LocationNode, LocationDropdownProps, BulkSelectionType } from './location/types'
-import { useLocationTree } from './location/useLocationTree'
-import { useLocationSelection } from './location/useLocationSelection'
-import { useLocationSearch } from './location/useLocationSearch'
-import { LocationNodeComponent } from './location/LocationNode'
-import { LocationSearchControls } from './location/LocationSearchControls'
-import { BulkSelectionControls } from './location/BulkSelectionControls'
+import { LocationData, LocationNode, BulkSelectionType, LocationDropdownProps } from '../types'
+import { useLocationTree } from '../location/useLocationTree'
+import { useLocationSelection } from '../location/useLocationSelection'
+import { useLocationSearch } from '../location/useLocationSearch'
+import { LocationNodeComponent } from '../location/LocationNode'
+import { LocationSearchControls } from '../location/LocationSearchControls'
+import { BulkSelectionControls } from '../location/BulkSelectionControls'
 
 interface ExtendedLocationDropdownProps extends LocationDropdownProps {
   disabled?: boolean // Add disabled prop

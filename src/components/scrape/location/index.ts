@@ -1,5 +1,5 @@
 // Export all location-related components and hooks
-export { default as HierarchicalLocationDropdown } from '../HierarchicalLocationDropdown'
+// export { default as HierarchicalLocationDropdown } from '../HierarchicalLocationDropdown'
 export { LocationNodeComponent } from './LocationNode'
 export { LocationSearchControls } from './LocationSearchControls'
 export { BulkSelectionControls } from './BulkSelectionControls'

@@ -1,26 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
-import { LocationRules } from './location/generateConfigPayload'
+import { supabase } from '@/lib/supabase/client'
+import { LocationRules } from '../location/generateConfigPayload'
+import { Task } from '../types'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-
-interface Task {
-  id: string
-  status: 'running' | 'completed' | 'failed'
-  progress?: number
-  message?: string
-  created_at: string
-  completed_at?: string
-  search_query?: string
-  location?: string
-  total_results?: number
-  credits_used?: number
-  error_message?: string
-  config?: ScrapingConfig
-  result_json_url?: string
-  result_csv_url?: string
-}
+import { withTimeoutAndRetry } from '@/lib/services/base-service'
 
 interface ScrapingConfig {
   search_query: string
@@ -106,12 +91,20 @@ export const ScrapingService = {
     try {
       console.log('Getting recent tasks for user:', userId, 'limit:', limit)
       
-      const { data: tasks, error } = await supabase
-        .from('scraper_task')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(limit)
+      const { data: tasks, error } = await withTimeoutAndRetry(
+        async () => {
+          const result = await supabase
+            .from('scraper_task')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(limit)
+          return result;
+        },
+        60000, // 60 second timeout
+        3, // 3 retries
+        `get-recent-tasks-${userId}` // unique key
+      )
       
       if (error) {
         throw new Error(`Database error: ${error.message}`)
@@ -150,11 +143,19 @@ export const ScrapingService = {
     try {
       console.log('Getting task status for:', taskId)
       
-      const { data: task, error } = await supabase
-        .from('scraper_task')
-        .select('*')
-        .eq('id', taskId)
-        .single()
+      const { data: task, error } = await withTimeoutAndRetry(
+        async () => {
+          const result = await supabase
+            .from('scraper_task')
+            .select('*')
+            .eq('id', taskId)
+            .single()
+          return result;
+        },
+        60000, // 60 second timeout
+        3, // 3 retries
+        `get-task-status-${taskId}` // unique key
+      )
       
       if (error) {
         throw new Error(`Database error: ${error.message}`)

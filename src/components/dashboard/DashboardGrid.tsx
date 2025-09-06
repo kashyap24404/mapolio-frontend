@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { useSupabase } from '@/lib/supabase-provider'
+import { useSupabase } from '@/lib/supabase/index'
+import { useUserStats } from '@/contexts/UserStatsContext'
 import { 
   CreditCard, 
   Search,
@@ -13,69 +14,20 @@ import {
   Plus,
   Loader2
 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useRouter } from 'next/navigation'
-import RecentScraperTasks from './RecentScraperTasks'
-import { scraperTaskService } from '@/lib/supabase-services'
 
 const DashboardGrid: React.FC = () => {
   const router = useRouter()
   const { profile, credits, loading, pricingPlan } = useSupabase()
+  const { taskStats, loading: statsLoading } = useUserStats()
   const [isLoading, setIsLoading] = useState(false)
-  const [taskStats, setTaskStats] = useState({
-    searches: 0,
-    results: 0,
-    creditsUsed: 0,
-    pendingTasks: 0
-  })
   
   // Function to handle navigation with loading state
   const handleNavigation = (path: string) => {
     setIsLoading(true)
     router.push(path)
   }
-  
-  // Function to fetch task statistics
-  useEffect(() => {
-    const fetchTaskStats = async () => {
-      try {
-        if (profile?.id) {
-          // Fetch this month's task statistics
-          const { stats, error } = await scraperTaskService.getThisMonthTaskStats(profile.id)
-          
-          if (!error && stats) {
-            setTaskStats({
-              searches: stats.searches,
-              results: stats.results,
-              creditsUsed: stats.creditsUsed,
-              pendingTasks: stats.pendingTasks
-            })
-          } else {
-            console.error('Error fetching task stats:', error)
-            // Fallback to placeholder data
-            setTaskStats({
-              searches: 0,
-              results: 0,
-              creditsUsed: 0,
-              pendingTasks: 0
-            })
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching task stats:', error)
-        // Fallback to placeholder data
-        setTaskStats({
-          searches: 0,
-          results: 0,
-          creditsUsed: 0,
-          pendingTasks: 0
-        })
-      }
-    }
-    
-    if (profile?.id) {
-      fetchTaskStats()
-    }
-  }, [profile?.id])
 
   if (loading) {
     return (
@@ -145,20 +97,37 @@ const DashboardGrid: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b">
-                <span className="text-sm text-muted-foreground">Searches</span>
-                <span className="font-semibold text-lg">{taskStats.searches}</span>
+            {statsLoading ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center pb-2 border-b">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-6 w-8" />
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-6 w-12" />
+                </div>
+                <div className="flex justify-between items-center">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-6 w-10" />
+                </div>
               </div>
-              <div className="flex justify-between items-center pb-2 border-b">
-                <span className="text-sm text-muted-foreground">Results</span>
-                <span className="font-semibold text-lg">{taskStats.results?.toLocaleString()}</span>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center pb-2 border-b">
+                  <span className="text-sm text-muted-foreground">Searches</span>
+                  <span className="font-semibold text-lg">{taskStats?.searches || 0}</span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b">
+                  <span className="text-sm text-muted-foreground">Results</span>
+                  <span className="font-semibold text-lg">{taskStats?.results?.toLocaleString() || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Credits Used</span>
+                  <span className="font-semibold text-lg">{taskStats?.creditsUsed?.toLocaleString() || 0}</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Credits Used</span>
-                <span className="font-semibold text-lg">{taskStats.creditsUsed?.toLocaleString()}</span>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -193,11 +162,6 @@ const DashboardGrid: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Recent Scraper Tasks Card - Full Width */}
-        <div className="md:col-span-2 lg:col-span-3">
-          <RecentScraperTasks />
-        </div>
       </div>
     </div>
   )
