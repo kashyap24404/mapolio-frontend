@@ -6,18 +6,20 @@ interface RequestState {
   consecutiveFailures: number;
   isCircuitOpen: boolean;
   circuitOpenTime: number;
+  pendingRequests: Set<string>;
 }
 
 const requestStates = new Map<string, RequestState>();
-const CIRCUIT_BREAKER_THRESHOLD = 5;
-const CIRCUIT_BREAKER_TIMEOUT = 60000; // 60 seconds
-const REQUEST_THROTTLE_MS = 1000; // 1 second between similar requests
+const CIRCUIT_BREAKER_THRESHOLD = 3; // Reduced from 5 to 3
+const CIRCUIT_BREAKER_TIMEOUT = 30000; // Reduced from 60s to 30s
+const REQUEST_THROTTLE_MS = 500; // Reduced from 1s to 500ms
+const REQUEST_DEDUPLICATION_MS = 2000; // 2 seconds for request deduplication
 
 // Enhanced timeout wrapper with circuit breaker and intelligent retry
 export const withTimeoutAndRetry = async <T>(
   fn: () => Promise<T>, 
-  timeoutMs: number = 60000, // Increased to 60s
-  retries: number = 3,
+  timeoutMs: number = 15000, // Reduced from 60s to 15s for better UX
+  retries: number = 2, // Reduced from 3 to 2
   requestKey?: string
 ): Promise<T> => {
   const key = requestKey || 'default';
@@ -25,7 +27,8 @@ export const withTimeoutAndRetry = async <T>(
     lastRequestTime: 0,
     consecutiveFailures: 0,
     isCircuitOpen: false,
-    circuitOpenTime: 0
+    circuitOpenTime: 0,
+    pendingRequests: new Set<string>()
   };
 
   // Check circuit breaker
@@ -40,8 +43,23 @@ export const withTimeoutAndRetry = async <T>(
     }
   }
 
-  // Request throttling
+  // Request deduplication - check if same request is already pending
+  const requestId = `${key}-${Date.now()}`;
   const now = Date.now();
+  
+  // Check if there's a recent similar request
+  for (const pendingId of state.pendingRequests) {
+    const pendingTime = parseInt(pendingId.split('-').pop() || '0');
+    if (now - pendingTime < REQUEST_DEDUPLICATION_MS) {
+      // Wait for the pending request to complete
+      await new Promise(resolve => setTimeout(resolve, REQUEST_DEDUPLICATION_MS - (now - pendingTime)));
+    }
+  }
+
+  // Add this request to pending
+  state.pendingRequests.add(requestId);
+
+  // Request throttling
   const timeSinceLastRequest = now - state.lastRequestTime;
   if (timeSinceLastRequest < REQUEST_THROTTLE_MS) {
     await new Promise(resolve => setTimeout(resolve, REQUEST_THROTTLE_MS - timeSinceLastRequest));
@@ -72,6 +90,7 @@ export const withTimeoutAndRetry = async <T>(
         // Success - reset circuit breaker state
         state.consecutiveFailures = 0;
         state.isCircuitOpen = false;
+        state.pendingRequests.delete(requestId);
         requestStates.set(key, state);
         
         return result;
@@ -116,14 +135,18 @@ export const withTimeoutAndRetry = async <T>(
       }
       
       // Exponential backoff with jitter for better distribution
-      const baseDelay = 1000 * Math.pow(2, i);
-      const jitter = Math.random() * 1000; // Add up to 1s random jitter
+      const baseDelay = 500 * Math.pow(2, i); // Reduced base delay
+      const jitter = Math.random() * 500; // Reduced jitter
       const delay = baseDelay + jitter;
       
       console.log(`Attempt ${i + 1} failed, retrying in ${Math.round(delay)}ms:`, (error as Error).message);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
+  
+  // Clean up pending request
+  state.pendingRequests.delete(requestId);
+  requestStates.set(key, state);
   
   // Provide more context in the error message
   if (lastError && lastError.message) {
@@ -139,7 +162,38 @@ export const resetCircuitBreaker = (key: string = 'default'): void => {
     state.isCircuitOpen = false;
     state.consecutiveFailures = 0;
     state.circuitOpenTime = 0;
+    state.pendingRequests.clear();
     requestStates.set(key, state);
     console.log(`Circuit breaker reset for ${key}`);
   }
+};
+
+// Helper function to reset all circuit breakers
+export const resetAllCircuitBreakers = (): void => {
+  for (const [key, state] of requestStates.entries()) {
+    state.isCircuitOpen = false;
+    state.consecutiveFailures = 0;
+    state.circuitOpenTime = 0;
+    state.pendingRequests.clear();
+    requestStates.set(key, state);
+  }
+  console.log('All circuit breakers reset');
+};
+
+// Helper function to get circuit breaker status
+export const getCircuitBreakerStatus = (key: string = 'default'): { isOpen: boolean, failures: number, timeRemaining: number } => {
+  const state = requestStates.get(key);
+  if (!state) {
+    return { isOpen: false, failures: 0, timeRemaining: 0 };
+  }
+  
+  const timeRemaining = state.isCircuitOpen 
+    ? Math.max(0, CIRCUIT_BREAKER_TIMEOUT - (Date.now() - state.circuitOpenTime))
+    : 0;
+    
+  return {
+    isOpen: state.isCircuitOpen,
+    failures: state.consecutiveFailures,
+    timeRemaining
+  };
 };

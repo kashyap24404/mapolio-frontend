@@ -17,8 +17,8 @@ export const scraperTaskService = {
             .limit(limit);
           return result;
         },
-        60000, // 60 second timeout
-        3, // 3 retries
+        10000, // 10 second timeout
+        2, // 2 retries
         `get-completed-tasks-${userId}` // unique key
       );
 
@@ -47,8 +47,8 @@ export const scraperTaskService = {
             .order('created_at', { ascending: false });
           return result;
         },
-        60000, // 60 second timeout
-        3, // 3 retries
+        10000, // 10 second timeout
+        2, // 2 retries
         `get-month-task-stats-${userId}` // unique key
       );
 

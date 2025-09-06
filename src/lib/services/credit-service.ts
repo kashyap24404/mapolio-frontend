@@ -13,8 +13,8 @@ export const creditService = {
             .select('*');
           return result;
         },
-        60000, // 60 second timeout
-        3, // 3 retries
+        10000, // 10 second timeout
+        2, // 2 retries
         'get-active-pricing-plan' // unique key
       );
 
@@ -52,8 +52,8 @@ export const creditService = {
             .single();
           return result;
         },
-        60000, // 60 second timeout
-        3, // 3 retries
+        10000, // 10 second timeout
+        2, // 2 retries
         `get-user-credits-${userId}` // unique key
       );
 
@@ -83,8 +83,8 @@ export const creditService = {
             .single();
           return result;
         },
-        60000, // 60 second timeout
-        3, // 3 retries
+        10000, // 10 second timeout
+        2, // 2 retries
         `get-current-credits-${userId}` // unique key
       );
 
@@ -107,8 +107,8 @@ export const creditService = {
             .single();
           return result;
         },
-        60000, // 60 second timeout
-        3, // 3 retries
+        10000, // 10 second timeout
+        2, // 2 retries
         `update-credits-${userId}` // unique key
       );
 
@@ -134,8 +134,8 @@ export const creditService = {
             .limit(limit);
           return result;
         },
-        60000, // 60 second timeout
-        3, // 3 retries
+        10000, // 10 second timeout
+        2, // 2 retries
         `get-purchase-history-${userId}` // unique key
       );
 

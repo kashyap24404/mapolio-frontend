@@ -8,6 +8,7 @@ import { ScrapingService } from '@/components/scrape/services/scrapingService'
 import { useActiveOnVisible } from '@/lib/supabase/hooks/usePageVisibility'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
+import { resetAllCircuitBreakers, getCircuitBreakerStatus } from '@/lib/services/base-service'
 
 // Define types for our context
 export interface TaskStats {
@@ -76,7 +77,7 @@ export function UserStatsProvider({ children }: { children: React.ReactNode }) {
   const channelRef = useRef<RealtimeChannel | null>(null)
   const userIdRef = useRef<string | null>(null)
   const lastFetchTimeRef = useRef(0)
-  const FETCH_DEBOUNCE_MS = 5000 // 5 seconds minimum between fetches
+  const FETCH_DEBOUNCE_MS = 10000 // 10 seconds minimum between fetches
 
   // Function to fetch task statistics
   const fetchTaskStats = useCallback(async (force = false) => {
@@ -252,15 +253,43 @@ export function UserStatsProvider({ children }: { children: React.ReactNode }) {
     return tasks.find(task => task.id === taskId)
   }, [tasks])
 
-  // Refresh all stats
+  // Refresh all stats with sequential execution to avoid overwhelming the server
   const refreshStats = useCallback(async () => {
-    await Promise.all([
-      fetchTaskStats(true), // Force refresh
-      fetchTransactions(),
-      fetchPurchaseHistory(),
-      fetchAllTasks(true) // Force refresh
-    ])
-  }, [fetchTaskStats, fetchTransactions, fetchPurchaseHistory, fetchAllTasks])
+    try {
+      // Check if any circuit breakers are open and reset them if needed
+      const circuitBreakerKeys = [
+        `get-month-task-stats-${user?.id}`,
+        `get-completed-tasks-${user?.id}`,
+        `get-purchase-history-${user?.id}`,
+        `get-recent-tasks-${user?.id}`
+      ];
+      
+      let hasOpenCircuitBreaker = false;
+      for (const key of circuitBreakerKeys) {
+        const status = getCircuitBreakerStatus(key);
+        if (status.isOpen) {
+          hasOpenCircuitBreaker = true;
+          console.log(`Circuit breaker open for ${key}, time remaining: ${status.timeRemaining}ms`);
+        }
+      }
+      
+      // If multiple circuit breakers are open, reset all
+      if (hasOpenCircuitBreaker) {
+        console.log('Resetting all circuit breakers due to multiple failures');
+        resetAllCircuitBreakers();
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      // Execute sequentially to avoid overwhelming the server
+      await fetchTaskStats(true) // Force refresh
+      await fetchTransactions()
+      await fetchPurchaseHistory()
+      await fetchAllTasks(true) // Force refresh
+    } catch (error) {
+      console.error('Error refreshing stats:', error)
+    }
+  }, [fetchTaskStats, fetchTransactions, fetchPurchaseHistory, fetchAllTasks, user?.id])
 
   // Setup real-time subscription for task updates
   const setupRealTimeSubscription = useCallback(() => {

@@ -22,8 +22,8 @@ export const pageService = {
             .single();
           return response;
         },
-        60000, // 60 second timeout
-        3, // 3 retries
+        10000, // 10 second timeout
+        2, // 2 retries
         `page-by-slug-${slug}` // unique key for this request
       );
 
@@ -55,8 +55,8 @@ export const pageService = {
             .order('title', { ascending: true });
           return response;
         },
-        60000, // 60 second timeout
-        3, // 3 retries
+        10000, // 10 second timeout
+        2, // 2 retries
         'all-published-pages' // unique key for this request
       );
 

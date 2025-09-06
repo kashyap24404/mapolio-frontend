@@ -101,8 +101,8 @@ export const ScrapingService = {
             .limit(limit)
           return result;
         },
-        60000, // 60 second timeout
-        3, // 3 retries
+        10000, // 10 second timeout
+        2, // 2 retries
         `get-recent-tasks-${userId}` // unique key
       )
       
@@ -152,8 +152,8 @@ export const ScrapingService = {
             .single()
           return result;
         },
-        60000, // 60 second timeout
-        3, // 3 retries
+        10000, // 10 second timeout
+        2, // 2 retries
         `get-task-status-${taskId}` // unique key
       )
       
