@@ -14,6 +14,7 @@ import {
 import { TaskDetailSkeleton } from '@/components/dashboard/ResultsSkeleton'
 import { useTaskDetail } from './hooks/useTaskDetail'
 import { useIntegratedTasksData } from '@/lib/hooks'
+import { DataFetchErrorBoundary } from '@/components/error-boundaries'
 
 export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -85,13 +86,19 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
               )}
 
               {task && (
-                <TaskDetailContent 
-                  task={task}
-                  loading={loading}
-                  onRefresh={refreshTasks}
-                  onBack={() => router.push('/dashboard/results')}
-                  onDownload={handleDownload}
-                />
+                <DataFetchErrorBoundary
+                  onError={(error, errorInfo) => {
+                    console.error('Task detail error:', error, errorInfo)
+                  }}
+                >
+                  <TaskDetailContent 
+                    task={task}
+                    loading={loading}
+                    onRefresh={refreshTasks}
+                    onBack={() => router.push('/dashboard/results')}
+                    onDownload={handleDownload}
+                  />
+                </DataFetchErrorBoundary>
               )}
             </div>
           </div>

@@ -8,7 +8,7 @@ import { useSupabase } from '@/lib/supabase/index'
 import { useIntegratedTasksData } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CreditCard, Plus, Loader2 } from 'lucide-react'
+import { CreditCard, Plus, Loader2 } from '@/lib/icons'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
 import { 

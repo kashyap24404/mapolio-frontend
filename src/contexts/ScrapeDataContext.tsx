@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, useMemo, ReactNode } from 'react';
 import { useScrapeStore } from '@/stores/scrape-store';
 import type { Category, Country, DataType, Rating } from '@/stores/scrape-store';
 
@@ -44,12 +44,15 @@ export function ScrapeDataProvider({ children }: ScrapeDataProviderProps) {
 
   // For now, scrape data is managed by the store directly
   // Future enhancement: add SWR integration for scrape data
-  const refreshScrapingData = () => {
-    // Placeholder for refresh functionality
-    console.log('Refresh scraping data - implement as needed');
-  };
+  const refreshScrapingData = useMemo(() => {
+    return () => {
+      // Placeholder for refresh functionality
+      console.log('Refresh scraping data - implement as needed');
+    };
+  }, []);
 
-  const value: ScrapeDataContextType = {
+  // Use useMemo for the context value to prevent unnecessary re-renders
+  const value = useMemo((): ScrapeDataContextType => ({
     categories,
     countries,
     dataTypes,
@@ -63,7 +66,21 @@ export function ScrapeDataProvider({ children }: ScrapeDataProviderProps) {
     dataTypesError,
     ratingsError,
     refreshScrapingData,
-  };
+  }), [
+    categories,
+    countries,
+    dataTypes,
+    ratings,
+    isLoadingCategories,
+    isLoadingCountries,
+    isLoadingDataTypes,
+    isLoadingRatings,
+    categoriesError,
+    countriesError,
+    dataTypesError,
+    ratingsError,
+    refreshScrapingData
+  ]);
 
   return (
     <ScrapeDataContext.Provider value={value}>

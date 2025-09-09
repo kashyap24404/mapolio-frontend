@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useSupabase } from '@/lib/supabase/index'
@@ -13,7 +13,7 @@ import {
   TrendingUp,
   Plus,
   Loader2
-} from 'lucide-react'
+} from '@/lib/icons'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useRouter } from 'next/navigation'
 
@@ -28,16 +28,27 @@ const DashboardGrid: React.FC = () => {
   // Transform UserStats to TaskStats format for UI compatibility
   const taskStats = userStats ? {
     searches: userStats.totalTasks,
-    results: 0, // This might need to be calculated from tasks
+    results: 0,
     creditsUsed: userStats.usedCredits,
     pendingTasks: userStats.totalTasks - userStats.completedTasks - userStats.failedTasks
   } : null
-  const [isLoading, setIsLoading] = useState(false)
   
-  // Function to handle navigation with loading state
+  const [isLoading, setIsLoading] = useState(false)
+  const [navigationTarget, setNavigationTarget] = useState<string | null>(null)
+  
+  // Handle navigation with proper loading state management
+  useEffect(() => {
+    if (navigationTarget) {
+      setIsLoading(true)
+      router.push(navigationTarget)
+      // Reset navigation target after triggering navigation
+      setNavigationTarget(null)
+    }
+  }, [navigationTarget, router])
+  
+  // Function to handle navigation
   const handleNavigation = (path: string) => {
-    setIsLoading(true)
-    router.push(path)
+    setNavigationTarget(path)
   }
 
   if (loading) {

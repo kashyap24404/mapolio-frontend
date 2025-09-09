@@ -8,10 +8,10 @@ import { swrKeys, swrConfigs } from '../config';
 const tasksService = TasksService.getInstance();
 
 // Fetcher functions
-const fetchTasks = async ([_, userId, filters, pagination]: readonly [string, string, any, any]) => {
-  console.log('fetchTasks called with:', { userId, filters, pagination });
+const fetchTasks = async ([_, userId, filtersStr, paginationStr]: readonly [string, string, string, string]) => {
+  const filters = JSON.parse(filtersStr);
+  const pagination = JSON.parse(paginationStr);
   const response = await tasksService.fetchTasks(userId, filters, pagination);
-  console.log('fetchTasks response:', response);
   if (response.error) throw new Error(response.error);
   return response.data;
 };
@@ -37,8 +37,12 @@ const fetchTaskById = async ([_, taskId, userId]: readonly [string, string, stri
 // SWR Hooks
 export function useTasks(userId: string | null, filters?: any, pagination?: any) {
   // Memoize the SWR key to prevent excessive re-generation
+  // Use JSON.stringify for stable object comparison
   const key = useMemo(() => {
-    return userId ? swrKeys.tasks().concat(userId, filters || {}, pagination || {}) : null;
+    if (!userId) return null;
+    const stableFilters = filters ? JSON.stringify(filters) : '{}';
+    const stablePagination = pagination ? JSON.stringify(pagination) : JSON.stringify({ page: 1, limit: 20 });
+    return [...swrKeys.tasks(), userId, stableFilters, stablePagination];
   }, [userId, filters, pagination]);
   
   const result = useSWR(
@@ -46,16 +50,6 @@ export function useTasks(userId: string | null, filters?: any, pagination?: any)
     fetchTasks,
     swrConfigs.tasks
   );
-  
-  // Debug logging
-  console.log('useTasks SWR result:', {
-    key,
-    data: result.data,
-    error: result.error,
-    isLoading: result.isLoading,
-    isValidating: result.isValidating,
-    userId
-  });
   
   return result;
 }

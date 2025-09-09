@@ -13,7 +13,7 @@ import {
   CreditCard,
   Tag,
   Receipt
-} from 'lucide-react'
+} from '@/lib/icons'
 
 interface SidebarProps {
   className?: string

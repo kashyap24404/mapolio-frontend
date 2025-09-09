@@ -65,7 +65,9 @@ interface TasksState {
   // Real-time subscription
   subscription: RealtimeChannel | null;
   isSubscribed: boolean;
-  
+}
+
+interface TasksActions {
   // Actions
   setTasks: (tasks: ScrapingTask[]) => void;
   setRecentTasks: (tasks: ScrapingTask[]) => void;
@@ -83,7 +85,9 @@ interface TasksState {
   reset: () => void;
 }
 
-const initialState = {
+type TasksStoreState = TasksState & TasksActions;
+
+const initialState: TasksState = {
   tasks: [],
   recentTasks: [],
   
@@ -97,9 +101,9 @@ const initialState = {
   isSubscribed: false,
 };
 
-export const useTasksStore = create<TasksState>()(
+export const useTasksStore = create<TasksStoreState>()(
   devtools(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
 
       setTasks: (tasks) => set({ tasks }, false, 'tasks/setTasks'),

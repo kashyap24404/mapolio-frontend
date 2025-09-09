@@ -27,7 +27,6 @@ export function useScrapeData(user: any) {
 
   // Load initial data only once
   useEffect(() => {
-    console.log('useScrapeData effect triggered')
     
     // Load data if not already loaded
     if (!hasLoadedCategories) {

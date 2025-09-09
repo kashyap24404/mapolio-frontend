@@ -53,7 +53,9 @@ interface UserState {
   // Real-time subscription
   subscription: RealtimeChannel | null;
   isSubscribed: boolean;
-  
+}
+
+interface UserActions {
   // Actions
   setUserStats: (stats: UserStats) => void;
   setTransactions: (transactions: Transaction[]) => void;
@@ -72,7 +74,9 @@ interface UserState {
   reset: () => void;
 }
 
-const initialState = {
+type UserStoreState = UserState & UserActions;
+
+const initialState: UserState = {
   userStats: null,
   transactions: [],
   purchaseHistory: [],
@@ -89,7 +93,7 @@ const initialState = {
   isSubscribed: false,
 };
 
-export const useUserStore = create<UserState>()(
+export const useUserStore = create<UserStoreState>()(
   devtools(
     persist(
       (set) => ({

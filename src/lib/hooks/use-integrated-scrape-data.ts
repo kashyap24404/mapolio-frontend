@@ -1,14 +1,54 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useScrapeStore } from '@/stores/scrape-store';
 import { useCategories, useCountries, useDataTypes, useRatings } from '@/lib/swr/hooks/use-scrape-data';
+import { useScrapeStoreActions } from './store-selectors';
 import type { Category, Country, DataType, Rating } from '@/stores/scrape-store';
+
+// Define the error and loading key types locally since ScrapeState is not exported
+type ErrorKeys = 'categoriesError' | 'countriesError' | 'dataTypesError' | 'ratingsError';
+type LoadingKeys = 'isLoadingCategories' | 'isLoadingCountries' | 'isLoadingDataTypes' | 'isLoadingRatings';
 
 /**
  * Integrated hook that combines SWR data fetching with Zustand state management
  * for scrape configuration data (categories, countries, data types, ratings)
  */
 export function useIntegratedScrapeData() {
+  // Use optimized action selectors to prevent unnecessary re-renders
+  const {
+    setCategories,
+    setCountries,
+    setDataTypes,
+    setRatings,
+    setLoading: setScrapeLoading,
+    setError: setScrapeError
+  } = useScrapeStoreActions();
+  
   const store = useScrapeStore();
+  
+  // Create stable callback references to prevent dependency issues
+  const stableSetCategories = useCallback((categories: Category[]) => {
+    setCategories(categories);
+  }, [setCategories]);
+  
+  const stableSetCountries = useCallback((countries: Country[]) => {
+    setCountries(countries);
+  }, [setCountries]);
+  
+  const stableSetDataTypes = useCallback((dataTypes: DataType[]) => {
+    setDataTypes(dataTypes);
+  }, [setDataTypes]);
+  
+  const stableSetRatings = useCallback((ratings: Rating[]) => {
+    setRatings(ratings);
+  }, [setRatings]);
+  
+  const stableSetError = useCallback((key: ErrorKeys, error: string | null) => {
+    setScrapeError(key, error);
+  }, [setScrapeError]);
+  
+  const stableSetLoading = useCallback((key: LoadingKeys, loading: boolean) => {
+    setScrapeLoading(key, loading);
+  }, [setScrapeLoading]);
   
   // SWR hooks for data fetching
   const {
@@ -39,50 +79,50 @@ export function useIntegratedScrapeData() {
     mutate: mutateRatings
   } = useRatings();
 
-  // Update Zustand store when SWR data changes - simplified without complex callbacks
+  // Update Zustand store when SWR data changes - with stable dependencies
   useEffect(() => {
     if (categories && !categoriesError) {
-      store.setCategories(categories);
-      store.setError('categoriesError', null);
+      stableSetCategories(categories);
+      stableSetError('categoriesError', null);
     }
     if (categoriesError) {
-      store.setError('categoriesError', categoriesError.message);
+      stableSetError('categoriesError', categoriesError.message);
     }
-    store.setLoading('isLoadingCategories', categoriesLoading);
-  }, [categories, categoriesError, categoriesLoading]);
+    stableSetLoading('isLoadingCategories', categoriesLoading);
+  }, [categories, categoriesError, categoriesLoading, stableSetCategories, stableSetError, stableSetLoading]);
 
   useEffect(() => {
     if (countries && !countriesError) {
-      store.setCountries(countries);
-      store.setError('countriesError', null);
+      stableSetCountries(countries);
+      stableSetError('countriesError', null);
     }
     if (countriesError) {
-      store.setError('countriesError', countriesError.message);
+      stableSetError('countriesError', countriesError.message);
     }
-    store.setLoading('isLoadingCountries', countriesLoading);
-  }, [countries, countriesError, countriesLoading]);
+    stableSetLoading('isLoadingCountries', countriesLoading);
+  }, [countries, countriesError, countriesLoading, stableSetCountries, stableSetError, stableSetLoading]);
 
   useEffect(() => {
     if (dataTypes && !dataTypesError) {
-      store.setDataTypes(dataTypes);
-      store.setError('dataTypesError', null);
+      stableSetDataTypes(dataTypes);
+      stableSetError('dataTypesError', null);
     }
     if (dataTypesError) {
-      store.setError('dataTypesError', dataTypesError.message);
+      stableSetError('dataTypesError', dataTypesError.message);
     }
-    store.setLoading('isLoadingDataTypes', dataTypesLoading);
-  }, [dataTypes, dataTypesError, dataTypesLoading]);
+    stableSetLoading('isLoadingDataTypes', dataTypesLoading);
+  }, [dataTypes, dataTypesError, dataTypesLoading, stableSetDataTypes, stableSetError, stableSetLoading]);
 
   useEffect(() => {
     if (ratings && !ratingsError) {
-      store.setRatings(ratings);
-      store.setError('ratingsError', null);
+      stableSetRatings(ratings);
+      stableSetError('ratingsError', null);
     }
     if (ratingsError) {
-      store.setError('ratingsError', ratingsError.message);
+      stableSetError('ratingsError', ratingsError.message);
     }
-    store.setLoading('isLoadingRatings', ratingsLoading);
-  }, [ratings, ratingsError, ratingsLoading]);
+    stableSetLoading('isLoadingRatings', ratingsLoading);
+  }, [ratings, ratingsError, ratingsLoading, stableSetRatings, stableSetError, stableSetLoading]);
 
   // Refresh function that triggers all SWR mutations - simplified
   const refresh = useCallback(async () => {

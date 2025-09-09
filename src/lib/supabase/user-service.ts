@@ -16,17 +16,14 @@ export const loadUserProfile = async (userId: string, setProfile: Function, setC
     const { profile, error } = await userService.getProfileById(userId);
     
     if (!error && profile) {
-      console.log('Successfully loaded user profile:', profile);
       setProfile(profile);
       // Load credits after profile is loaded
       try {
         await loadUserCredits(userId, setCredits);
       } catch (creditsError) {
-        console.error('Error loading user credits after profile load:', creditsError);
         // Continue with profile even if credits loading fails
       }
     } else if (error) {
-      console.error('Error loading user profile:', error);
       // Try to create profile if it doesn't exist
       try {
         const { data: userData } = await withTimeoutAndRetry(
@@ -38,7 +35,6 @@ export const loadUserProfile = async (userId: string, setProfile: Function, setC
           'get-user-data'
         );
         if (userData.user) {
-          console.log('Creating new profile for user:', userData.user.id, userData.user.email);
           const { profile: newProfile, error: createError } = await userService.createProfile(userId, userData.user.email!);
           if (!createError && newProfile) {
             setProfile(newProfile);

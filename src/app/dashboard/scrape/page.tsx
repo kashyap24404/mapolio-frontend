@@ -8,6 +8,7 @@ import { useIntegratedScrapeData } from '@/lib/hooks'
 import { useScrapeForm } from './hooks/useScrapeForm'
 import { ErrorState } from './components/LoadingStates'
 import { ScrapeContent } from './components/ScrapeContent'
+import { DataFetchErrorBoundary, FormErrorBoundary } from '@/components/error-boundaries'
 
 export default function ScrapePage() {
   // Authentication and user data
@@ -75,22 +76,34 @@ export default function ScrapePage() {
         <DashboardSidebar className="fixed left-0 top-14 h-[calc(100vh-3.5rem)]" />
         
         <main className="flex-1 ml-64">
-          <ScrapeContent
-            formState={formState}
-            locationState={locationState}
-            locationError={locationError}
-            categories={categories}
-            countries={countries}
-            dataTypes={dataTypes}
-            ratings={ratings}
-            credits={credits}
-            isLoading={scrapeDataLoading || authLoading}
-            updateFormState={updateFormState}
-            handleDataTypeChange={handleDataTypeChange}
-            handleBulkDataTypeSelection={handleBulkDataTypeSelection}
-            handleEstimate={handleEstimate}
-            handleStartScraping={handleStartScraping}
-          />
+          <DataFetchErrorBoundary
+            onError={(error, errorInfo) => {
+              console.error('Scrape data error:', error, errorInfo)
+            }}
+          >
+            <FormErrorBoundary
+              onError={(error, errorInfo) => {
+                console.error('Scrape form error:', error, errorInfo)
+              }}
+            >
+              <ScrapeContent
+                formState={formState}
+                locationState={locationState}
+                locationError={locationError}
+                categories={categories}
+                countries={countries}
+                dataTypes={dataTypes}
+                ratings={ratings}
+                credits={credits}
+                isLoading={scrapeDataLoading || authLoading}
+                updateFormState={updateFormState}
+                handleDataTypeChange={handleDataTypeChange}
+                handleBulkDataTypeSelection={handleBulkDataTypeSelection}
+                handleEstimate={handleEstimate}
+                handleStartScraping={handleStartScraping}
+              />
+            </FormErrorBoundary>
+          </DataFetchErrorBoundary>
         </main>
       </div>
     </div>

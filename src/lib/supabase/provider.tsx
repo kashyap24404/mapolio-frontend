@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { SupabaseContext } from './context'
 import { loadUserProfile } from './user-service'
@@ -19,6 +19,92 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [pricingPlan, setPricingPlan] = useState<PricingPlan | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Stable functions to prevent infinite loops
+  const stableSetUser = useCallback((newUser: User | null) => {
+    setUser(newUser);
+  }, []);
+
+  const stableSetProfile = useCallback((newProfile: Profile | null) => {
+    setProfile(newProfile);
+  }, []);
+
+  const stableSetCredits = useCallback((newCredits: UserCredits | null) => {
+    setCredits(newCredits);
+  }, []);
+
+  const stableSetPricingPlan = useCallback((newPricingPlan: PricingPlan | null) => {
+    setPricingPlan(newPricingPlan);
+  }, []);
+
+  const stableSetLoading = useCallback((newLoading: boolean) => {
+    setLoading(newLoading);
+  }, []);
+
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo<SupabaseContextType>(() => ({
+    user,
+    profile,
+    credits,
+    pricingPlan,
+    loading,
+    signIn: async (email: string, password: string) => {
+      return await signIn(email, password, stableSetLoading, stableSetUser, stableSetProfile, stableSetCredits)
+    },
+    signUp: async (email: string, password: string, displayName?: string) => {
+      return await signUp(email, password, displayName, stableSetLoading, stableSetUser, stableSetProfile, stableSetCredits)
+    },
+    signOut: async () => {
+      return await signOut(stableSetUser, stableSetProfile, stableSetCredits)
+    },
+    refreshCredits: async () => {
+      if (user && user.id) {
+        try {
+          await refreshCredits(user.id, (userId: string) => loadUserCredits(userId, stableSetCredits))
+        } catch (error) {
+          console.error('Error refreshing credits:', error);
+        }
+      } else {
+        console.warn('Cannot refresh credits: User not authenticated');
+      }
+    },
+    purchaseCredits: async (amount: number, price: number) => {
+      if (!user || !profile) {
+        return { success: false, error: { message: 'User not authenticated' } }
+      }
+
+      return await purchaseCredits(
+        user.id, 
+        profile, 
+        amount, 
+        price, 
+        stableSetProfile, 
+        stableSetCredits, 
+        (userId: string) => loadUserCredits(userId, stableSetCredits)
+      )
+    },
+    useCredits: async (amount: number) => {
+      if (!user || !profile) {
+        return { success: false, error: { message: 'User not authenticated' } }
+      }
+
+      return await useCredits(
+        user.id, 
+        profile, 
+        amount, 
+        stableSetProfile, 
+        stableSetCredits, 
+        (userId: string) => loadUserCredits(userId, stableSetCredits)
+      )
+    },
+    updateProfile: async (updates: { display_name?: string; notification_settings?: Record<string, any> }) => {
+      if (!user || !profile) {
+        return { success: false, error: { message: 'User not authenticated' } }
+      }
+
+      return await updateProfile(user.id, profile, updates, stableSetProfile)
+    }
+  }), [user, profile, credits, pricingPlan, loading])
+
   // Initialize and check for existing session
   useEffect(() => {
     let isMounted = true
@@ -33,42 +119,41 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         if (error) {
           console.error('Error getting session:', error)
           if (isMounted) {
-            setLoading(false)
+            stableSetLoading(false)
           }
           return
         }
         
         if (session?.user) {
-          setUser(session.user)
+          stableSetUser(session.user)
           // Load profile and credits with error handling
           try {
-            await loadUserProfile(session.user.id, setProfile, setCredits)
+            await loadUserProfile(session.user.id, stableSetProfile, stableSetCredits)
           } catch (profileError) {
             console.error('Error loading user profile after session init:', profileError)
             // Continue with session even if profile loading fails
           }
         } else {
           // No session, ensure state is clean
-          setUser(null)
-          setProfile(null)
-          setCredits(null)
+          stableSetUser(null)
+          stableSetProfile(null)
+          stableSetCredits(null)
         }
         
         // Load pricing plan regardless of user authentication
         try {
-          await loadPricingPlan(setPricingPlan)
+          await loadPricingPlan(stableSetPricingPlan)
         } catch (planError) {
-          console.error('Error loading pricing plan:', planError)
           // Continue without pricing plan
         }
         
         if (isMounted) {
-          setLoading(false)
+          stableSetLoading(false)
         }
       } catch (error) {
         console.error('Error in getInitialSession:', error)
         if (isMounted) {
-          setLoading(false)
+          stableSetLoading(false)
         }
       }
     }
@@ -80,24 +165,22 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       async (event: any, session: any) => {
         if (!isMounted) return
         
-        console.log('Auth state changed:', event, session?.user?.id)
-        
         if (session?.user) {
-          setUser(session.user)
+          stableSetUser(session.user)
           try {
-            await loadUserProfile(session.user.id, setProfile, setCredits)
+            await loadUserProfile(session.user.id, stableSetProfile, stableSetCredits)
           } catch (profileError) {
             console.error('Error loading user profile after auth change:', profileError)
             // Continue with session even if profile loading fails
           }
         } else {
-          setUser(null)
-          setProfile(null)
-          setCredits(null)
+          stableSetUser(null)
+          stableSetProfile(null)
+          stableSetCredits(null)
         }
         
         if (isMounted) {
-          setLoading(false)
+          stableSetLoading(false)
         }
       }
     )
@@ -110,86 +193,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
 
   // Handle tab visibility changes to refresh session when user returns to tab
   useEffect(() => {
-    return setupVisibilityHandler(user, setUser, setProfile, setCredits)
+    return setupVisibilityHandler(user, stableSetUser, stableSetProfile, stableSetCredits)
   }, [user])
-
-  const handleSignIn = async (email: string, password: string) => {
-    return await signIn(email, password, setLoading, setUser, setProfile, setCredits)
-  }
-
-  const handleSignUp = async (email: string, password: string, displayName?: string) => {
-    return await signUp(email, password, displayName, setLoading, setUser, setProfile, setCredits)
-  }
-
-  const handleSignOut = async () => {
-    return await signOut(setUser, setProfile, setCredits)
-  }
-
-  const handleRefreshCredits = async () => {
-    if (user && user.id) {
-      try {
-        await refreshCredits(user.id, (userId: string) => loadUserCredits(userId, setCredits))
-      } catch (error) {
-        console.error('Error refreshing credits:', error);
-      }
-    } else {
-      console.warn('Cannot refresh credits: User not authenticated');
-    }
-  }
-
-  const handlePurchaseCredits = async (amount: number, price: number) => {
-    if (!user || !profile) {
-      return { success: false, error: { message: 'User not authenticated' } }
-    }
-
-    return await purchaseCredits(
-      user.id, 
-      profile, 
-      amount, 
-      price, 
-      setProfile, 
-      setCredits, 
-      (userId: string) => loadUserCredits(userId, setCredits)
-    )
-  }
-
-  const handleUseCredits = async (amount: number) => {
-    if (!user || !profile) {
-      return { success: false, error: { message: 'User not authenticated' } }
-    }
-
-    return await useCredits(
-      user.id, 
-      profile, 
-      amount, 
-      setProfile, 
-      setCredits, 
-      (userId: string) => loadUserCredits(userId, setCredits)
-    )
-  }
-
-  const handleUpdateProfile = async (updates: { display_name?: string; notification_settings?: Record<string, any> }) => {
-    if (!user || !profile) {
-      return { success: false, error: { message: 'User not authenticated' } }
-    }
-
-    return await updateProfile(user.id, profile, updates, setProfile)
-  }
-
-  const contextValue: SupabaseContextType = {
-    user,
-    profile,
-    credits,
-    pricingPlan,
-    loading,
-    signIn: handleSignIn,
-    signUp: handleSignUp,
-    signOut: handleSignOut,
-    refreshCredits: handleRefreshCredits,
-    purchaseCredits: handlePurchaseCredits,
-    useCredits: handleUseCredits,
-    updateProfile: handleUpdateProfile
-  }
 
   return (
     <SupabaseContext.Provider value={contextValue}>

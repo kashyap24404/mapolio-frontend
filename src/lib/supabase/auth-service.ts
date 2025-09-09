@@ -14,7 +14,6 @@ const MIN_CHECK_INTERVAL = 60000; // 60 seconds minimum between session checks -
 export const setupVisibilityHandler = (user: any, setUser: Function, setProfile: Function, setCredits: Function) => {
   // Prevent multiple handlers from being set up
   if (isVisibilityHandlerActive) {
-    console.log('Visibility handler already active, skipping setup');
     return () => {};
   }
   
@@ -37,14 +36,12 @@ export const setupVisibilityHandler = (user: any, setUser: Function, setProfile:
       
       // Don't check session too frequently
       if (now - lastVisibilityCheck < MIN_CHECK_INTERVAL) {
-        console.log('Skipping session check - too recent');
         return;
       }
 
       lastVisibilityCheck = now;
       
       try {
-        console.log('Checking session validity after tab focus...');
         const { data: { session } } = await withTimeoutAndRetry(
           async () => {
             return await supabase.auth.getSession();
@@ -56,7 +53,6 @@ export const setupVisibilityHandler = (user: any, setUser: Function, setProfile:
         
         // Only refresh if session is actually expired (with 10 minute buffer)
         if (!session || (session.expires_at && new Date(session.expires_at * 1000) < new Date(Date.now() + 10 * 60 * 1000))) {
-          console.log('Session expired, attempting refresh...');
           const { data: { session: refreshedSession }, error } = await withTimeoutAndRetry(
             async () => {
               return await supabase.auth.refreshSession();
@@ -67,28 +63,22 @@ export const setupVisibilityHandler = (user: any, setUser: Function, setProfile:
           );
           
           if (error) {
-            console.warn('Session refresh failed, signing out:', error);
             setUser(null);
             setProfile(null);
             setCredits(null);
           } else if (refreshedSession?.user) {
-            console.log('Session refreshed successfully');
             // Only update user if it's different to prevent unnecessary re-renders
             if (refreshedSession.user.id !== user.id) {
               setUser(refreshedSession.user);
             }
             // Profile and credits reload will be handled by the auth state change listener
           } else {
-            console.warn('No session after refresh, signing out');
             setUser(null);
             setProfile(null);
             setCredits(null);
           }
-        } else {
-          console.log('Session is still valid, no refresh needed');
         }
       } catch (error) {
-        console.error('Error checking session status:', error);
         // Don't force sign out on network errors - just log and continue
       }
     }, VISIBILITY_DEBOUNCE_MS);

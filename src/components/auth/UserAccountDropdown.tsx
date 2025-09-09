@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useSupabase } from '@/lib/supabase/index'
-import { User, CreditCard, Settings, LogOut, ChevronDown } from 'lucide-react'
+import { User, CreditCard, Settings, LogOut, ChevronDown } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
 const UserAccountDropdown: React.FC = () => {

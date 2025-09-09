@@ -8,7 +8,6 @@ This directory contains the refactored scrape page components following clean ar
 
 - **`ScrapeForm.tsx`** - Main form container component
 - **`ScrapeActions.tsx`** - Sidebar with cost estimation, credits, and action buttons
-- **`useScrapeData.ts`** - Custom hook for data management and API calls
 - **`types.ts`** - TypeScript interfaces and types
 
 ### Form Sections
@@ -21,11 +20,12 @@ This directory contains the refactored scrape page components following clean ar
 ## Usage
 
 ```typescript
-import { ScrapeForm, ScrapeActions, useScrapeData } from '@/components/scrape'
+import { ScrapeForm, ScrapeActions } from '@/components/scrape'
+import { useIntegratedScrapeData } from '@/lib/hooks'
 
 // In your page component
 const { user, profile, credits } = useSupabase()
-const scrapeData = useScrapeData(user)
+const scrapeData = useIntegratedScrapeData()
 
 // Use the components
 <ScrapeForm {...formProps} {...scrapeData} />

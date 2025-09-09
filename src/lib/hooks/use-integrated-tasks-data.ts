@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useTasksStore } from '@/stores/tasks-store';
 import { useTasks, useRecentTasks, useTask } from '@/lib/swr/hooks/use-tasks';
+import { useTasksStoreActions } from './store-selectors';
 import type { ScrapingTask } from '@/stores/tasks-store';
 
 /**
@@ -8,48 +9,57 @@ import type { ScrapingTask } from '@/stores/tasks-store';
  * for tasks-related data
  */
 export function useIntegratedTasksData(userId: string | null, filters?: any, pagination?: any) {
+  // Use optimized action selectors to prevent unnecessary re-renders
+  const {
+    setTasks,
+    setLoading: setTasksLoading,
+    setError: setTasksError
+  } = useTasksStoreActions();
+  
   const store = useTasksStore();
   
-  console.log('useIntegratedTasksData called with:', { userId, filters, pagination });
+  // Create stable callback references to prevent dependency issues
+  const stableSetTasks = useCallback((tasks: ScrapingTask[]) => {
+    setTasks(tasks);
+  }, [setTasks]);
   
-  // Extract stable store methods to avoid dependency issues
-  const { setTasks, setLoading, setError, updateTask } = store;
+  const stableSetLoading = useCallback((key: any, loading: boolean) => {
+    setTasksLoading(key, loading);
+  }, [setTasksLoading]);
+  
+  const stableSetError = useCallback((key: any, error: string | null) => {
+    setTasksError(key, error);
+  }, [setTasksError]);
   
   // SWR hooks for data fetching - only call when we have a valid userId
-  console.log('About to call useTasks with:', { userId, shouldCall: Boolean(userId) });
   const {
     data: tasksData,
     error: tasksError,
     isLoading: tasksLoading,
     mutate: mutateTasks
   } = useTasks(userId, filters || {}, pagination || { page: 1, limit: 20 });
-  
-  console.log('useTasks returned:', { tasksData, tasksError, tasksLoading });
 
   // Update Zustand store when SWR data changes
   useEffect(() => {
-    console.log('Tasks effect triggered:', { tasksData, tasksError, tasksLoading });
     if (tasksData?.tasks && !tasksError) {
-      console.log('Setting tasks in store:', tasksData.tasks.length, 'tasks');
-      setTasks(tasksData.tasks);
-      setError('tasksError', null);
+      stableSetTasks(tasksData.tasks);
+      stableSetError('tasksError', null);
     }
     if (tasksError) {
-      console.log('Setting tasks error:', tasksError.message);
-      setError('tasksError', tasksError.message);
+      stableSetError('tasksError', tasksError.message);
     }
-    setLoading('isLoadingTasks', tasksLoading);
-  }, [tasksData?.tasks, tasksError, tasksLoading, setTasks, setError, setLoading]);
+    stableSetLoading('isLoadingTasks', tasksLoading);
+  }, [tasksData?.tasks, tasksError, tasksLoading, stableSetTasks, stableSetError, stableSetLoading]);
 
   // Refresh function that triggers SWR mutations
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     await mutateTasks();
-  };
+  }, [mutateTasks]);
 
   // Helper function to get task by ID
-  const getTaskById = (taskId: string): ScrapingTask | undefined => {
+  const getTaskById = useCallback((taskId: string): ScrapingTask | undefined => {
     return store.tasks.find(task => task.id === taskId);
-  };
+  }, [store.tasks]);
 
   // Return simplified state focused on main tasks only
   return {
@@ -74,12 +84,8 @@ export function useIntegratedTasksData(userId: string | null, filters?: any, pag
     refresh,
     mutateTasks,
     
-    // Debug info - temporary
-    _debug: {
-      tasksData,
-      tasksLoading,
-      mainTasksCount: tasksData?.tasks?.length || 0,
-      tasksDataStructure: tasksData ? Object.keys(tasksData) : [],
+    // Pagination info for UI
+    pagination: {
       total: tasksData?.total || 0,
       hasMore: tasksData?.hasMore || false
     }
@@ -90,10 +96,13 @@ export function useIntegratedTasksData(userId: string | null, filters?: any, pag
  * Hook for fetching a specific task by ID with Zustand integration
  */
 export function useIntegratedTaskDetail(taskId: string | undefined) {
+  const { updateTask } = useTasksStoreActions();
   const store = useTasksStore();
   
-  // Extract stable store methods to avoid dependency issues
-  const { updateTask } = store;
+  // Create stable callback reference to prevent dependency issues
+  const stableUpdateTask = useCallback((taskId: string, updates: any) => {
+    updateTask(taskId, updates);
+  }, [updateTask]);
   
   const {
     data: taskData,
@@ -105,15 +114,17 @@ export function useIntegratedTaskDetail(taskId: string | undefined) {
   // Update store when task data changes
   useEffect(() => {
     if (taskData && !taskError && taskId) {
-      updateTask(taskId, taskData);
+      stableUpdateTask(taskId, taskData);
     }
-  }, [taskData, taskError, taskId, updateTask]);
+  }, [taskData, taskError, taskId, stableUpdateTask]);
 
   // Get task from store as fallback
-  const storeTask = store.tasks.find(task => task.id === taskId);
+  const storeTask = useCallback(() => {
+    return store.tasks.find(task => task.id === taskId);
+  }, [store.tasks, taskId]);
   
   return {
-    task: taskData || storeTask || null,
+    task: taskData || storeTask() || null,
     isLoading: taskLoading,
     error: taskError?.message || null,
     refresh: mutateTask,

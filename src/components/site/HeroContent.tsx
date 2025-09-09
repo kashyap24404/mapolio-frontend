@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback, forwardRef, u
 import { motion, AnimatePresence, type Transition, type VariantLabels, type Target, type TargetAndTransition, type Variants } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Zap } from 'lucide-react';
+import { ArrowRight, Zap } from '@/lib/icons';
 import { useRouter } from 'next/navigation';
 
 function cn(...classes: (string | undefined | null | boolean)[]): string {

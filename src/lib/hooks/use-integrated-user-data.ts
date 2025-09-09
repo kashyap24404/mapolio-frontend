@@ -1,6 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import useSWR from 'swr';
-import { useUserStore } from '@/stores/user-store';
+import { 
+  useUserStoreActions,
+  useUserStats as useUserStatsSelector,
+  useUserTransactions,
+  useUserPurchaseHistory,
+  useUserLoadingStates,
+  useUserErrors
+} from './store-selectors';
 import { useUserStats, useTransactions, usePurchaseHistory } from '@/lib/swr/hooks/use-user';
 import type { UserStats, Transaction, PurchaseHistory } from '@/stores/user-store';
 
@@ -9,10 +16,42 @@ import type { UserStats, Transaction, PurchaseHistory } from '@/stores/user-stor
  * for user-related data (stats, transactions, purchase history)
  */
 export function useIntegratedUserData(userId: string | null) {
-  const store = useUserStore();
+  // Use optimized action selectors to prevent unnecessary re-renders
+  const {
+    setUserStats,
+    setTransactions,
+    setPurchaseHistory,
+    setLoading,
+    setError
+  } = useUserStoreActions();
   
-  // Extract stable store methods to avoid dependency issues
-  const { setUserStats, setTransactions, setPurchaseHistory, setLoading, setError } = store;
+  // Individual selectors for store state
+  const userStatsSelector = useUserStatsSelector();
+  const transactionsSelector = useUserTransactions();
+  const purchaseHistorySelector = useUserPurchaseHistory();
+  const loadingStatesSelector = useUserLoadingStates();
+  const errorsSelector = useUserErrors();
+  
+  // Create stable references for the store actions to prevent infinite loops
+  const stableSetUserStats = useCallback((stats: UserStats) => {
+    setUserStats(stats);
+  }, [setUserStats]);
+  
+  const stableSetTransactions = useCallback((transactions: Transaction[]) => {
+    setTransactions(transactions);
+  }, [setTransactions]);
+  
+  const stableSetPurchaseHistory = useCallback((history: PurchaseHistory[]) => {
+    setPurchaseHistory(history);
+  }, [setPurchaseHistory]);
+  
+  const stableSetLoading = useCallback((key: keyof Pick<any, 'isLoadingStats' | 'isLoadingTransactions' | 'isLoadingPurchaseHistory'>, loading: boolean) => {
+    setLoading(key, loading);
+  }, [setLoading]);
+  
+  const stableSetError = useCallback((key: keyof Pick<any, 'statsError' | 'transactionsError' | 'purchaseHistoryError'>, error: string | null) => {
+    setError(key, error);
+  }, [setError]);
   
   // SWR hooks for data fetching
   const {
@@ -36,48 +75,48 @@ export function useIntegratedUserData(userId: string | null) {
     mutate: mutatePurchase
   } = usePurchaseHistory(userId || '', 20);
 
-  // Update Zustand store when SWR data changes
+  // Update Zustand store when SWR data changes - using stable dependencies
   useEffect(() => {
     if (userStats && !statsError) {
-      setUserStats(userStats);
-      setError('statsError', null);
+      stableSetUserStats(userStats);
+      stableSetError('statsError', null);
     }
     if (statsError) {
-      setError('statsError', statsError.message);
+      stableSetError('statsError', statsError.message);
     }
-    setLoading('isLoadingStats', statsLoading);
-  }, [userStats, statsError, statsLoading, setUserStats, setError, setLoading]);
+    stableSetLoading('isLoadingStats', statsLoading);
+  }, [userStats, statsError, statsLoading, stableSetUserStats, stableSetError, stableSetLoading]);
 
   useEffect(() => {
     if (transactions && !transactionsError) {
-      setTransactions(transactions);
-      setError('transactionsError', null);
+      stableSetTransactions(transactions);
+      stableSetError('transactionsError', null);
     }
     if (transactionsError) {
-      setError('transactionsError', transactionsError.message);
+      stableSetError('transactionsError', transactionsError.message);
     }
-    setLoading('isLoadingTransactions', transactionsLoading);
-  }, [transactions, transactionsError, transactionsLoading, setTransactions, setError, setLoading]);
+    stableSetLoading('isLoadingTransactions', transactionsLoading);
+  }, [transactions, transactionsError, transactionsLoading, stableSetTransactions, stableSetError, stableSetLoading]);
 
   useEffect(() => {
     if (purchaseHistory && !purchaseError) {
-      setPurchaseHistory(purchaseHistory);
-      setError('purchaseHistoryError', null);
+      stableSetPurchaseHistory(purchaseHistory);
+      stableSetError('purchaseHistoryError', null);
     }
     if (purchaseError) {
-      setError('purchaseHistoryError', purchaseError.message);
+      stableSetError('purchaseHistoryError', purchaseError.message);
     }
-    setLoading('isLoadingPurchaseHistory', purchaseLoading);
-  }, [purchaseHistory, purchaseError, purchaseLoading, setPurchaseHistory, setError, setLoading]);
+    stableSetLoading('isLoadingPurchaseHistory', purchaseLoading);
+  }, [purchaseHistory, purchaseError, purchaseLoading, stableSetPurchaseHistory, stableSetError, stableSetLoading]);
 
   // Refresh function that triggers all SWR mutations
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     await Promise.all([
       mutateStats(),
       mutateTransactions(),
       mutatePurchase()
     ]);
-  };
+  }, [mutateStats, mutateTransactions, mutatePurchase]);
 
   // Return both SWR state and Zustand store state
   return {
@@ -88,15 +127,15 @@ export function useIntegratedUserData(userId: string | null) {
     
     // Zustand store state (for global access)
     store: {
-      userStats: store.userStats,
-      transactions: store.transactions,
-      purchaseHistory: store.purchaseHistory,
-      isLoadingStats: store.isLoadingStats,
-      isLoadingTransactions: store.isLoadingTransactions,
-      isLoadingPurchaseHistory: store.isLoadingPurchaseHistory,
-      statsError: store.statsError,
-      transactionsError: store.transactionsError,
-      purchaseHistoryError: store.purchaseHistoryError,
+      userStats: userStatsSelector,
+      transactions: transactionsSelector,
+      purchaseHistory: purchaseHistorySelector,
+      isLoadingStats: loadingStatesSelector.isLoadingStats,
+      isLoadingTransactions: loadingStatesSelector.isLoadingTransactions,
+      isLoadingPurchaseHistory: loadingStatesSelector.isLoadingPurchaseHistory,
+      statsError: errorsSelector.statsError,
+      transactionsError: errorsSelector.transactionsError,
+      purchaseHistoryError: errorsSelector.purchaseHistoryError,
     },
     
     // Combined loading state
@@ -119,5 +158,18 @@ export function useIntegratedUserData(userId: string | null) {
  * Hook that only accesses Zustand store data (for components that don't need to trigger fetching)
  */
 export function useUserStoreData() {
-  return useUserStore();
+  // Use individual selectors instead of the whole store
+  const userStats = useUserStatsSelector();
+  const transactions = useUserTransactions();
+  const purchaseHistory = useUserPurchaseHistory();
+  const loadingStates = useUserLoadingStates();
+  const errors = useUserErrors();
+  
+  return {
+    userStats,
+    transactions,
+    purchaseHistory,
+    ...loadingStates,
+    ...errors,
+  };
 }

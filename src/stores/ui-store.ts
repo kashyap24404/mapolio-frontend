@@ -6,7 +6,9 @@ interface UIState {
   isLoading: boolean;
   error: string | null;
   activeTab: string;
-  
+}
+
+interface UIActions {
   // Actions
   setSidebarOpen: (open: boolean) => void;
   setLoading: (loading: boolean) => void;
@@ -15,13 +17,19 @@ interface UIState {
   clearError: () => void;
 }
 
-export const useUIStore = create<UIState>()(
+type UIStoreState = UIState & UIActions;
+
+const initialState: UIState = {
+  isSidebarOpen: false,
+  isLoading: false,
+  error: null,
+  activeTab: 'overview',
+};
+
+export const useUIStore = create<UIStoreState>()(
   devtools(
     (set) => ({
-      isSidebarOpen: false,
-      isLoading: false,
-      error: null,
-      activeTab: 'overview',
+      ...initialState,
 
       setSidebarOpen: (open) => set({ isSidebarOpen: open }, false, 'ui/setSidebarOpen'),
       setLoading: (loading) => set({ isLoading: loading }, false, 'ui/setLoading'),

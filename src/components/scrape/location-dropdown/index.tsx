@@ -141,7 +141,7 @@ export default function HierarchicalLocationDropdown({
         }
       }
     } catch (error) {
-      console.error('Bulk selection error:', error)
+      // Silent error handling for user experience
     } finally {
       setTimeout(() => {
         setIsProcessingBulk(false)

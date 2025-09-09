@@ -44,7 +44,9 @@ interface ScrapeState {
   countriesError: string | null;
   dataTypesError: string | null;
   ratingsError: string | null;
-  
+}
+
+interface ScrapeActions {
   // Actions
   setCategories: (categories: Category[]) => void;
   setCountries: (countries: Country[]) => void;
@@ -58,7 +60,9 @@ interface ScrapeState {
   reset: () => void;
 }
 
-const initialState = {
+type ScrapeStoreState = ScrapeState & ScrapeActions;
+
+const initialState: ScrapeState = {
   categories: [],
   countries: [],
   dataTypes: [],
@@ -75,7 +79,7 @@ const initialState = {
   ratingsError: null,
 };
 
-export const useScrapeStore = create<ScrapeState>()(
+export const useScrapeStore = create<ScrapeStoreState>()(
   devtools(
     persist(
       (set) => ({

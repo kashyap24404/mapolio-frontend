@@ -7,7 +7,7 @@ import DashboardGrid from '@/components/dashboard/DashboardGrid'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2 } from '@/lib/icons'
 
 const DashboardPage: React.FC = () => {
   const router = useRouter()

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { FileJson, FileSpreadsheet, Download, Loader2 } from 'lucide-react'
+import { FileJson, FileSpreadsheet, Download, Loader2 } from '@/lib/icons'
 import { Task } from '../../[id]/types'
 
 interface DownloadSectionProps {

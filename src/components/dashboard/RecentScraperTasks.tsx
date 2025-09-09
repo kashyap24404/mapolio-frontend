@@ -72,13 +72,11 @@ const RecentScraperTasks: React.FC = () => {
     
     // Don't fetch if page is not visible and not forced
     if (!force && !isActive) {
-      console.log('RecentScraperTasks: Skipping fetch - page not active')
       return
     }
     
     // Prevent too frequent fetches unless forced
     if (!force && now - lastFetchTime.current < FETCH_DEBOUNCE_MS) {
-      console.log('RecentScraperTasks: Skipping fetch - too recent')
       return
     }
     
@@ -89,13 +87,10 @@ const RecentScraperTasks: React.FC = () => {
     try {
       lastFetchTime.current = now
       
-      console.log('RecentScraperTasks: Fetching tasks for user:', user.id)
-      
       // Refresh tasks using SWR mutate
       await refreshTasks()
     } catch (err) {
       if (!isMountedRef.current) return // Component unmounted during fetch
-      console.error('Unexpected error:', err)
     }
   }, [user?.id, isActive, refreshTasks])
   
@@ -108,7 +103,6 @@ const RecentScraperTasks: React.FC = () => {
     
     // Check if user has actually changed to prevent unnecessary re-initialization
     if (userIdRef.current === user.id && subscriptionRef.current) {
-      console.log('RecentScraperTasks: User unchanged, skipping re-initialization')
       // But still fetch tasks if we don't have any
       if ((recentTasks || []).length === 0) {
         fetchRecentTasks(true) // Force fetch if no tasks
@@ -121,7 +115,6 @@ const RecentScraperTasks: React.FC = () => {
     
     // Clean up existing subscription before creating new one
     if (subscriptionRef.current) {
-      console.log('RecentScraperTasks: Cleaning up existing subscription')
       supabase.removeChannel(subscriptionRef.current)
       subscriptionRef.current = null
     }
@@ -130,7 +123,6 @@ const RecentScraperTasks: React.FC = () => {
     fetchRecentTasks(true) // Force initial fetch
     
     // Set up new subscription
-    console.log('RecentScraperTasks: Setting up subscription')
     subscriptionRef.current = supabase
       .channel(`recent_tasks_changes_${user.id}`)
       .on('postgres_changes', { 
@@ -139,8 +131,6 @@ const RecentScraperTasks: React.FC = () => {
         table: 'scraper_task',
         filter: `user_id=eq.${user.id}`
       }, (payload) => {
-        console.log('RecentScraperTasks: Real-time update received:', payload.eventType)
-        
         // Handle real-time updates without full re-fetch when possible
         if (payload.eventType === 'INSERT' && payload.new) {
           // Refresh tasks to get the new task
@@ -159,13 +149,11 @@ const RecentScraperTasks: React.FC = () => {
         }
       })
       .subscribe((status) => {
-        console.log('RecentScraperTasks: Subscription status:', status)
       })
     
     // Cleanup function
     return () => {
       if (subscriptionRef.current) {
-        console.log('RecentScraperTasks: Cleaning up subscription on unmount')
         supabase.removeChannel(subscriptionRef.current)
         subscriptionRef.current = null
       }
@@ -176,7 +164,6 @@ const RecentScraperTasks: React.FC = () => {
   React.useEffect(() => {
     // If the page just became visible and we have a user, refresh the tasks
     if (justBecameVisible && user && isActive) {
-      console.log('RecentScraperTasks: Page became visible, refreshing tasks')
       fetchRecentTasks(true) // Force refresh when page becomes visible
     }
   }, [justBecameVisible, user?.id, isActive, fetchRecentTasks])

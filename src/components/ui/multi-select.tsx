@@ -1,11 +1,11 @@
 'use client'
 
-import React from 'react'
+import React, { memo, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { Check, ChevronDown, X } from 'lucide-react'
+import { Check, ChevronDown, X } from '@/lib/icons'
 import { useMultiSelect, MultiSelectOption } from '@/components/ui/multi-select/useMultiSelect'
 
 interface MultiSelectProps {
@@ -20,7 +20,7 @@ interface MultiSelectProps {
   className?: string
 }
 
-export const MultiSelect: React.FC<MultiSelectProps> = ({
+export const MultiSelect = memo<MultiSelectProps>(function MultiSelect({
   options,
   selectedValues,
   onSelectionChange,
@@ -30,7 +30,8 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   loading = false,
   maxDisplayItems = 3,
   className
-}) => {
+}) {
+  // Get values from the custom hook first
   const {
     isClient,
     isOpen,
@@ -49,6 +50,26 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
     selectedValues,
     onSelectionChange
   })
+
+  // Memoize toggle option handler to prevent child re-renders
+  const handleToggleOption = useCallback((optionId: string) => {
+    toggleOption(optionId)
+  }, [toggleOption])
+
+  // Memoize clear all handler
+  const handleClearAll = useCallback(() => {
+    clearAll()
+  }, [clearAll])
+
+  // Memoize select all handler
+  const handleSelectAll = useCallback(() => {
+    selectAll()
+  }, [selectAll])
+
+  // Memoize toggle dropdown handler
+  const handleToggleDropdown = useCallback(() => {
+    setIsOpen(!isOpen)
+  }, [isOpen, setIsOpen])
 
   // Render the component content
   const renderContent = () => {
@@ -73,7 +94,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
             isOpen && "ring-2 ring-ring ring-offset-2"
           )}
           disabled={disabled || loading}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={handleToggleDropdown}
         >
           <span className="truncate flex-1 text-sm">
             {loading ? "Loading..." : getDisplayText(placeholder)}
@@ -97,7 +118,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    toggleOption(option.id)
+                    handleToggleOption(option.id)
                   }}
                   className="hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 >
@@ -141,7 +162,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={selectAll}
+                      onClick={handleSelectAll}
                       className="h-6 text-xs px-2"
                       disabled={options.length === 0}
                     >
@@ -151,7 +172,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={clearAll}
+                      onClick={handleClearAll}
                       className="h-6 text-xs px-2"
                       disabled={selectedValues.length === 0}
                     >
@@ -175,7 +196,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                             "w-full flex items-center justify-between py-2 px-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
                             isSelected && "bg-accent text-accent-foreground"
                           )}
-                          onClick={() => toggleOption(option.id)}
+                          onClick={() => handleToggleOption(option.id)}
                         >
                           <div className="truncate flex-1 text-left">{option.label}</div>
                           {isSelected && (
@@ -199,4 +220,4 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   }
 
   return renderContent()
-}
+})

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, useMemo, useCallback, ReactNode } from 'react';
 import { useTasksStore } from '@/stores/tasks-store';
 import { useTasks, useRecentTasks } from '@/lib/swr/hooks/use-tasks';
 import type { ScrapingTask } from '@/stores/tasks-store';
@@ -41,17 +41,30 @@ export function TasksDataProvider({ children, userId }: TasksDataProviderProps) 
     isLoading: recentTasksLoading 
   } = useRecentTasks(shouldFetch ? userId : null, 5);
 
-  // Use store data as fallback, SWR data when available
-  const tasks = tasksData?.tasks || storeTasks;
-  const recentTasks = recentTasksData || storeRecentTasks;
-  const isLoading = shouldFetch ? (tasksLoading || recentTasksLoading) : false;
-  const error = tasksError?.message || recentTasksError?.message || null;
+  // Use useMemo to prevent unnecessary re-renders and infinite loops
+  const tasks = useMemo(() => {
+    return tasksData?.tasks || storeTasks;
+  }, [tasksData?.tasks, storeTasks]);
+  
+  const recentTasks = useMemo(() => {
+    return recentTasksData || storeRecentTasks;
+  }, [recentTasksData, storeRecentTasks]);
+  
+  const isLoading = useMemo(() => {
+    return shouldFetch ? (tasksLoading || recentTasksLoading) : false;
+  }, [shouldFetch, tasksLoading, recentTasksLoading]);
+  
+  const error = useMemo(() => {
+    return tasksError?.message || recentTasksError?.message || null;
+  }, [tasksError?.message, recentTasksError?.message]);
 
-  const getTaskById = (id: string): ScrapingTask | undefined => {
+  // Use useCallback to prevent function recreation on every render
+  const getTaskById = useCallback((id: string): ScrapingTask | undefined => {
     return tasks.find((task: ScrapingTask) => task.id === id);
-  };
+  }, [tasks]);
 
-  const value: TasksDataContextType = {
+  // Use useMemo for the context value to prevent unnecessary re-renders
+  const value = useMemo((): TasksDataContextType => ({
     tasks,
     recentTasks,
     isLoading,
@@ -59,7 +72,7 @@ export function TasksDataProvider({ children, userId }: TasksDataProviderProps) 
     subscriptionStatus: 'connected',
     refreshTasks,
     getTaskById,
-  };
+  }), [tasks, recentTasks, isLoading, error, refreshTasks, getTaskById]);
 
   return (
     <TasksDataContext.Provider value={value}>

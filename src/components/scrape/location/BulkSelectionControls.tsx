@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Search, RotateCcw, CheckSquare, ChevronDown, Map, Building, Home, MapPin } from 'lucide-react'
+import { Search, RotateCcw, CheckSquare, ChevronDown, Map, Building, Home, MapPin } from '@/lib/icons'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'

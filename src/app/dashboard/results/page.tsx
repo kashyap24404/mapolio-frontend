@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
@@ -10,9 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { FileText, Search, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react'
+import { FileText, Search, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from '@/lib/icons'
 import Link from 'next/link'
 import { ResultsSkeleton } from '@/components/dashboard/ResultsSkeleton'
+import { DataFetchErrorBoundary } from '@/components/error-boundaries'
 
 export default function ResultsPage() {
   const router = useRouter()
@@ -24,19 +25,12 @@ export default function ResultsPage() {
     isLoading: loading, 
     error, 
     refresh: refreshTasks,
-    _debug
+    pagination
   } = useIntegratedTasksData(user?.id || null)
   
   const subscriptionStatus = 'connected' // This could be added to the integrated hook if needed
 
-  // Debug logging - remove in production
-  React.useEffect(() => {
-    if (tasks.length > 0 && !loading) {
-      console.log(`✅ ResultsPage: Successfully loaded ${tasks.length} tasks`);
-    }
-  }, [tasks.length, loading]);
-
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = useCallback((status: string) => {
     switch (status) {
       case 'running':
       case 'processing':
@@ -48,9 +42,9 @@ export default function ResultsPage() {
       default:
         return <Clock className="h-4 w-4" />
     }
-  }
+  }, [])
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'running':
       case 'processing':
@@ -62,20 +56,25 @@ export default function ResultsPage() {
       default:
         return 'secondary'
     }
-  }
+  }, [])
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleString()
-  }
+  }, [])
 
-  const formatLocation = (task: any) => {
+  const formatLocation = useCallback((task: any) => {
     try {
       // Use the transformed country field which now contains location info
       return task.country || 'Multiple locations'
     } catch {
       return 'Unknown location'
     }
-  }
+  }, [])
+
+  // Memoize the refresh handler to prevent unnecessary re-renders
+  const handleRefresh = useCallback(() => {
+    refreshTasks()
+  }, [refreshTasks])
 
   // Check authentication after loading completes
   React.useEffect(() => {
@@ -102,7 +101,7 @@ export default function ResultsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => refreshTasks()}
+                    onClick={handleRefresh}
                     disabled={loading}
                   >
                     <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -124,69 +123,75 @@ export default function ResultsPage() {
               
               {/* Show content when data is available, regardless of auth loading state */}
               {!loading && !error && tasks.length > 0 && (
-                <div className="space-y-4">
-                  {tasks.map((task) => (
-                    <Link key={task.id} href={`/dashboard/results/${task.id}`} className="block">
-                      <Card className="cursor-pointer hover:shadow-md transition-shadow">
-                        <CardHeader className="pb-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              {getStatusIcon(task.status)}
-                              <div>
-                                <CardTitle className="text-lg">
-                                  {task.category || 'Unknown Category'}
-                                </CardTitle>
-                                <p className="text-sm text-muted-foreground">
-                                  {formatLocation(task)}
-                                </p>
+                <DataFetchErrorBoundary
+                  onError={(error, errorInfo) => {
+                    console.error('Tasks list error:', error, errorInfo)
+                  }}
+                >
+                  <div className="space-y-4">
+                    {tasks.map((task) => (
+                      <Link key={task.id} href={`/dashboard/results/${task.id}`} className="block">
+                        <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                          <CardHeader className="pb-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                {getStatusIcon(task.status)}
+                                <div>
+                                  <CardTitle className="text-lg">
+                                    {task.category || 'Unknown Category'}
+                                  </CardTitle>
+                                  <p className="text-sm text-muted-foreground">
+                                    {formatLocation(task)}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Badge variant={getStatusColor(task.status) as 'secondary' | 'default' | 'destructive'}>
+                                  {task.status}
+                                </Badge>
                               </div>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Badge variant={getStatusColor(task.status) as 'secondary' | 'default' | 'destructive'}>
-                                {task.status}
-                              </Badge>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          {task.status === 'running' && task.progress !== undefined && (
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Progress</span>
-                                <span>{task.progress}%</span>
-                              </div>
-                              <Progress value={task.progress} className="h-2" />
-                            </div>
-                          )}
-                          
-                          {task.status === 'failed' && task.error_message && (
-                            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                              <p className="text-sm text-destructive font-medium">Error:</p>
-                              <p className="text-sm text-destructive">{task.error_message}</p>
-                            </div>
-                          )}
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div>
-                              <span className="text-muted-foreground">Created:</span>
-                              <p className="font-medium">{formatDate(task.created_at)}</p>
-                            </div>
-                            {task.total_records !== undefined && (
-                              <div>
-                                <span className="text-muted-foreground">Results:</span>
-                                <p className="font-medium">{task.total_records.toLocaleString()}</p>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            {task.status === 'running' && task.progress !== undefined && (
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span>Progress</span>
+                                  <span>{task.progress}%</span>
+                                </div>
+                                <Progress value={task.progress} className="h-2" />
                               </div>
                             )}
-                            <div>
-                              <span className="text-muted-foreground">Credits Used:</span>
-                              <p className="font-medium">{task.processed_records?.toLocaleString() || 0}</p>
+                            
+                            {task.status === 'failed' && task.error_message && (
+                              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                                <p className="text-sm text-destructive font-medium">Error:</p>
+                                <p className="text-sm text-destructive">{task.error_message}</p>
+                              </div>
+                            )}
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Created:</span>
+                                <p className="font-medium">{formatDate(task.created_at)}</p>
+                              </div>
+                              {task.total_records !== undefined && (
+                                <div>
+                                  <span className="text-muted-foreground">Results:</span>
+                                  <p className="font-medium">{task.total_records.toLocaleString()}</p>
+                                </div>
+                              )}
+                              <div>
+                                <span className="text-muted-foreground">Credits Used:</span>
+                                <p className="font-medium">{task.processed_records?.toLocaleString() || 0}</p>
+                              </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
+                </DataFetchErrorBoundary>
               )}
               
               {error && (

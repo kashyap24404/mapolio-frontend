@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Eye, RefreshCw } from 'lucide-react'
+import { FileText, Eye, RefreshCw } from '@/lib/icons'
 import Link from 'next/link'
 
 export default function PagesAdminPage() {

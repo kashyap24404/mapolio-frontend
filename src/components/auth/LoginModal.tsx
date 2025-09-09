@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useSupabase } from '@/lib/supabase/index'
-import { MapPin, Mail, User, Loader2, Eye, EyeOff, Lock } from 'lucide-react'
+import { MapPin, Mail, User, Loader2, Eye, EyeOff, Lock } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
 interface LoginModalProps {
