@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, memo } from 'react'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tag } from 'lucide-react'
-import { Category } from './types'
+import { Category } from '../types'
 
 interface BusinessCategorySectionProps {
   category: string
@@ -17,7 +17,7 @@ interface BusinessCategorySectionProps {
   disabled?: boolean // Add disabled prop
 }
 
-export default function BusinessCategorySection({
+const BusinessCategorySection = memo<BusinessCategorySectionProps>(function BusinessCategorySection({
   category,
   setCategory,
   isManualCategory,
@@ -51,7 +51,7 @@ export default function BusinessCategorySection({
       )
     }
 
-    console.log('BusinessCategorySection render:', { categories: categories.length })
+    // Debug: BusinessCategorySection render with ${categories.length} categories
     
     return (
       <div className="space-y-3">
@@ -109,4 +109,8 @@ export default function BusinessCategorySection({
   }
 
   return renderContent()
-}
+})
+
+BusinessCategorySection.displayName = 'BusinessCategorySection'
+
+export default BusinessCategorySection

@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { useSupabase } from '@/lib/supabase/index'
-import { useUserStats } from '@/contexts/UserStatsContext'
+import { useIntegratedUserData } from '@/lib/hooks'
 import {
   Table,
   TableBody,
@@ -16,7 +16,7 @@ import { Loader2 } from 'lucide-react'
 
 const PurchaseHistory = () => {
   const { user } = useSupabase()
-  const { purchaseHistory, loading, error } = useUserStats()
+  const { purchaseHistory, isLoading: loading, error } = useIntegratedUserData(user?.id || null)
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -28,8 +28,8 @@ const PurchaseHistory = () => {
     })
   }
 
-  const formatCurrency = (cents: number) => {
-    return `$${(cents / 100).toFixed(2)}`
+  const formatCurrency = (amount: number) => {
+    return `$${amount.toFixed(2)}`
   }
 
   if (!user) {
@@ -52,7 +52,7 @@ const PurchaseHistory = () => {
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error}
           </div>
-        ) : purchaseHistory.length === 0 ? (
+        ) : !purchaseHistory || purchaseHistory.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             No purchase history found
           </div>
@@ -63,17 +63,17 @@ const PurchaseHistory = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Credits</TableHead>
                 <TableHead>Amount</TableHead>
-                <TableHead>Payment Method</TableHead>
+                <TableHead>Package</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {purchaseHistory.map((transaction) => (
+              {purchaseHistory?.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell>{formatDate(transaction.created_at)}</TableCell>
-                  <TableCell>{transaction.credits_purchased.toLocaleString()}</TableCell>
-                  <TableCell>{formatCurrency(transaction.amount_paid_cents)}</TableCell>
-                  <TableCell className="capitalize">{transaction.payment_gateway}</TableCell>
+                  <TableCell>{transaction.credits.toLocaleString()}</TableCell>
+                  <TableCell>{formatCurrency(transaction.amount)}</TableCell>
+                  <TableCell className="capitalize">{transaction.package_name}</TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'

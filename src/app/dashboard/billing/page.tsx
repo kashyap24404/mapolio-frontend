@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
 import { useSupabase } from '@/lib/supabase/index'
-import { useUserStats } from '@/contexts/UserStatsContext'
+import { useIntegratedTasksData } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CreditCard, Plus, Loader2 } from 'lucide-react'
@@ -23,15 +23,19 @@ import {
 interface ScraperTask {
   id: string
   created_at: string
-  config: any
-  credits_used: number
-  total_results: number
+  category?: string
+  status: string
+  processed_records?: number
+  total_records?: number
 }
 
 export default function BillingPage() {
   const { user, profile, credits, pricingPlan, loading: authLoading } = useSupabase()
-  const { transactions, loading: transactionsLoading } = useUserStats()
+  const { tasks, isLoading: transactionsLoading } = useIntegratedTasksData(user?.id || null)
   const router = useRouter()
+  
+  // Filter completed tasks to show as transactions
+  const transactions = tasks.filter(task => task.status === 'completed')
 
   // Check authentication after loading completes
   React.useEffect(() => {
@@ -175,16 +179,16 @@ export default function BillingPage() {
                                 {formatDate(task.created_at)}
                               </TableCell>
                               <TableCell>
-                                {task.config?.search_query || 'Scraping Task'}
+                                {task.category || 'Scraping Task'}
                               </TableCell>
                               <TableCell className="text-right">
-                                {task.total_results?.toLocaleString() || 0}
+                                {task.total_records?.toLocaleString() || 0}
                               </TableCell>
                               <TableCell className="text-right">
-                                {task.credits_used?.toLocaleString() || 0}
+                                {task.processed_records?.toLocaleString() || 0}
                               </TableCell>
                               <TableCell className="text-right">
-                                ${(task.credits_used * pricePerCredit).toFixed(2)}
+                                ${((task.processed_records || 0) * pricePerCredit).toFixed(2)}
                               </TableCell>
                             </TableRow>
                           ))}

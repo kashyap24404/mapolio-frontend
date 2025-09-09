@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useSupabase } from '@/lib/supabase/index'
-import { useUserStats } from '@/contexts/UserStatsContext'
+import { useIntegratedUserData } from '@/lib/hooks'
 import { 
   CreditCard, 
   Search,
@@ -20,7 +20,18 @@ import { useRouter } from 'next/navigation'
 const DashboardGrid: React.FC = () => {
   const router = useRouter()
   const { profile, credits, loading, pricingPlan } = useSupabase()
-  const { taskStats, loading: statsLoading } = useUserStats()
+  const { 
+    userStats, 
+    isLoading: statsLoading 
+  } = useIntegratedUserData(profile?.id || null)
+  
+  // Transform UserStats to TaskStats format for UI compatibility
+  const taskStats = userStats ? {
+    searches: userStats.totalTasks,
+    results: 0, // This might need to be calculated from tasks
+    creditsUsed: userStats.usedCredits,
+    pendingTasks: userStats.totalTasks - userStats.completedTasks - userStats.failedTasks
+  } : null
   const [isLoading, setIsLoading] = useState(false)
   
   // Function to handle navigation with loading state

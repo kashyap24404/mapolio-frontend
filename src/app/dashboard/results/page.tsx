@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
 import { useSupabase } from '@/lib/supabase/index'
-import { useUserStats } from '@/contexts/UserStatsContext'
+import { useIntegratedTasksData } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,29 +18,28 @@ export default function ResultsPage() {
   const router = useRouter()
   const { user, profile, loading: authLoading } = useSupabase()
   
-  // Use the global user stats context instead of separate tasks context
+  // Use the integrated tasks data hook instead of user stats context
   const { 
     tasks, 
-    loading, 
+    isLoading: loading, 
     error, 
-    refreshStats: refreshTasks,
-    subscriptionStatus
-  } = useUserStats()
+    refresh: refreshTasks,
+    _debug
+  } = useIntegratedTasksData(user?.id || null)
+  
+  const subscriptionStatus = 'connected' // This could be added to the integrated hook if needed
 
-  // Debug logging
+  // Debug logging - remove in production
   React.useEffect(() => {
-    console.log('ResultsPage: State update', { 
-      tasksCount: tasks.length, 
-      loading, 
-      error, 
-      subscriptionStatus,
-      authLoading 
-    })
-  }, [tasks.length, loading, error, subscriptionStatus, authLoading])
+    if (tasks.length > 0 && !loading) {
+      console.log(`✅ ResultsPage: Successfully loaded ${tasks.length} tasks`);
+    }
+  }, [tasks.length, loading]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'running':
+      case 'processing':
         return <AlertCircle className="h-4 w-4" />
       case 'completed':
         return <CheckCircle className="h-4 w-4" />
@@ -54,6 +53,7 @@ export default function ResultsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'running':
+      case 'processing':
         return 'default'
       case 'completed':
         return 'default'
@@ -70,17 +70,8 @@ export default function ResultsPage() {
 
   const formatLocation = (task: any) => {
     try {
-      if (task.config?.location_rules) {
-        const locationRules = task.config.location_rules
-        // Extract meaningful location info from the location rules
-        if (locationRules.include && locationRules.include.length > 0) {
-          return locationRules.include.map((rule: any) => rule.name || rule.zip_code).join(', ')
-        }
-        if (locationRules.base && locationRules.base.length > 0) {
-          return locationRules.base.map((rule: any) => rule.name || rule.zip_code).join(', ')
-        }
-      }
-      return task.config?.search_query || 'Multiple locations'
+      // Use the transformed country field which now contains location info
+      return task.country || 'Multiple locations'
     } catch {
       return 'Unknown location'
     }
@@ -143,7 +134,7 @@ export default function ResultsPage() {
                               {getStatusIcon(task.status)}
                               <div>
                                 <CardTitle className="text-lg">
-                                  {task.config?.search_query || 'Unknown Category'}
+                                  {task.category || 'Unknown Category'}
                                 </CardTitle>
                                 <p className="text-sm text-muted-foreground">
                                   {formatLocation(task)}
@@ -168,10 +159,6 @@ export default function ResultsPage() {
                             </div>
                           )}
                           
-                          {task.message && (
-                            <p className="text-sm text-muted-foreground">{task.message}</p>
-                          )}
-                          
                           {task.status === 'failed' && task.error_message && (
                             <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
                               <p className="text-sm text-destructive font-medium">Error:</p>
@@ -184,15 +171,15 @@ export default function ResultsPage() {
                               <span className="text-muted-foreground">Created:</span>
                               <p className="font-medium">{formatDate(task.created_at)}</p>
                             </div>
-                            {task.total_results !== undefined && (
+                            {task.total_records !== undefined && (
                               <div>
                                 <span className="text-muted-foreground">Results:</span>
-                                <p className="font-medium">{task.total_results.toLocaleString()}</p>
+                                <p className="font-medium">{task.total_records.toLocaleString()}</p>
                               </div>
                             )}
                             <div>
                               <span className="text-muted-foreground">Credits Used:</span>
-                              <p className="font-medium">{task.credits_used?.toLocaleString() || 0}</p>
+                              <p className="font-medium">{task.processed_records?.toLocaleString() || 0}</p>
                             </div>
                           </div>
                         </CardContent>

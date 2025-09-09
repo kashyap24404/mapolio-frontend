@@ -92,6 +92,7 @@ export const ScrapeContent: React.FC<ScrapeContentProps> = ({
               handleStartScraping={handleStartScraping}
               category={formState.category}
               selectedDataTypes={formState.selectedDataTypes} // Add selectedDataTypes prop
+              dataTypes={dataTypes} // Pass dataTypes prop
               isSubmitting={formState.isSubmitting}
               isLoading={isLoading} // Pass loading state to actions
             />

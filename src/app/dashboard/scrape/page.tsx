@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
 import { useSupabase } from '@/lib/supabase/index'
-import { useScrapeData } from '@/contexts/ScrapeDataContext'
+import { useIntegratedScrapeData } from '@/lib/hooks'
 import { useScrapeForm } from './hooks/useScrapeForm'
 import { ErrorState } from './components/LoadingStates'
 import { ScrapeContent } from './components/ScrapeContent'
@@ -13,16 +13,37 @@ export default function ScrapePage() {
   // Authentication and user data
   const { user, profile, credits, loading: authLoading } = useSupabase()
   
-  // Global scrape data from context
+  // Global scrape data from integrated hook
   const {
-    categories,
-    countries,
-    dataTypes,
-    ratings,
-    loading: scrapeDataLoading,
+    categories: rawCategories,
+    countries: rawCountries,
+    dataTypes: rawDataTypes,
+    ratings: rawRatings,
+    isLoading: scrapeDataLoading,
     error: scrapeDataError,
-    refreshData
-  } = useScrapeData()
+    refresh: refreshData
+  } = useIntegratedScrapeData()
+  
+  // Transform store types to component types
+  const categories = rawCategories.map(cat => ({
+    id: cat.id,
+    value: cat.value,
+    label: cat.label
+  }))
+  
+  const countries = rawCountries // Countries type seems compatible
+  
+  const dataTypes = rawDataTypes.map(dt => ({
+    id: dt.id,
+    label: dt.label,
+    credits_increase: dt.credits_increase || 0
+  }))
+  
+  const ratings = rawRatings.map(rating => ({
+    id: rating.id,
+    value: rating.value,
+    label: rating.label
+  }))
   
   // Form state and handlers from custom hook
   const {

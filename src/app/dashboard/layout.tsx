@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { ScrapeDataProvider } from '@/contexts/ScrapeDataContext';
-import { UserStatsProvider } from '@/contexts/UserStatsContext';
 import { useSupabase } from '@/lib/supabase/index';
 import { useRouter, usePathname } from 'next/navigation';
+import { TasksDataProvider } from '@/contexts/TasksDataContext';
+import { ScrapeDataProvider } from '@/contexts/ScrapeDataContext';
 
 export default function DashboardLayout({
   children,
@@ -27,11 +27,12 @@ export default function DashboardLayout({
     console.log('Dashboard layout rendered - Providers mounted');
   }, []);
 
+  // Always provide the context, but with conditional user ID
   return (
-    <ScrapeDataProvider>
-      <UserStatsProvider>
+    <TasksDataProvider userId={user?.id || ''}>
+      <ScrapeDataProvider>
         {children}
-      </UserStatsProvider>
-    </ScrapeDataProvider>
+      </ScrapeDataProvider>
+    </TasksDataProvider>
   );
 }

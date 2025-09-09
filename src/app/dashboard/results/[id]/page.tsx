@@ -13,7 +13,7 @@ import {
 } from './components'
 import { TaskDetailSkeleton } from '@/components/dashboard/ResultsSkeleton'
 import { useTaskDetail } from './hooks/useTaskDetail'
-import { useUserStats } from '@/contexts/UserStatsContext'
+import { useIntegratedTasksData } from '@/lib/hooks'
 
 export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -23,8 +23,8 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   // Use the refactored useTaskDetail hook that now uses the global context
   const { task, loading, error } = useTaskDetail(user, taskId)
   
-  // Get the refresh function from the global context
-  const { refreshStats: refreshTasks } = useUserStats()
+  // Get the refresh function from the integrated tasks hook
+  const { refresh: refreshTasks } = useIntegratedTasksData(user?.id || null)
 
   // Unwrap the params promise
   useEffect(() => {

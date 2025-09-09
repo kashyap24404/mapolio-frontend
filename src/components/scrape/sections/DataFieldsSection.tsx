@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, memo } from 'react'
 import { Label } from '@/components/ui/label'
 import { Database, DollarSign } from 'lucide-react'
-import { MultiSelect, MultiSelectOption } from '@/components/ui/multi-select'
-import { DataType } from './types'
+import { MultiSelect } from '@/components/ui/multi-select'
+import { MultiSelectOption } from '@/components/ui/multi-select/useMultiSelect'
+import { DataType } from '../types'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -21,7 +22,7 @@ interface DataTypeOption extends MultiSelectOption {
   credits_increase?: number
 }
 
-export default function DataFieldsSection({
+const DataFieldsSection = memo<DataFieldsSectionProps>(function DataFieldsSection({
   selectedDataTypes,
   handleDataTypeChange,
   handleBulkDataTypeSelection,
@@ -50,7 +51,7 @@ export default function DataFieldsSection({
       )
     }
 
-    console.log('DataFieldsSection render:', { dataTypes: dataTypes.length })
+    // Debug: DataFieldsSection render with ${dataTypes.length} dataTypes
     
     // Handle selection changes for multi-select
     const handleSelectionChange = (selectedIds: string[]) => {
@@ -141,4 +142,8 @@ export default function DataFieldsSection({
   }
 
   return renderContent()
-}
+})
+
+DataFieldsSection.displayName = 'DataFieldsSection'
+
+export default DataFieldsSection

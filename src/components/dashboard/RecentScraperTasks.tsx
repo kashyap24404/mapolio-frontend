@@ -9,20 +9,13 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { useSupabase } from '@/lib/supabase/hooks'
 import { useActiveOnVisible } from '@/lib/supabase/hooks/usePageVisibility'
-import { useUserStats } from '@/contexts/UserStatsContext'
+import { useRecentTasks } from '@/lib/swr/hooks/use-tasks'
+import type { ScrapingTask } from '@/stores/tasks-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Clock, Search, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 
-interface Task {
-  id: string
-  search_query: string
-  status: string
-  created_at: string
-  user_id: string
-}
-
-const getStatusIcon = (status: string) => {
+const getStatusIcon = (status: ScrapingTask['status']) => {
   switch (status) {
     case 'completed':
       return <CheckCircle className="h-4 w-4 text-green-500" />
@@ -37,7 +30,7 @@ const getStatusIcon = (status: string) => {
   }
 }
 
-const getStatusText = (status: string) => {
+const getStatusText = (status: ScrapingTask['status']) => {
   switch (status) {
     case 'completed':
       return 'Completed'
@@ -48,7 +41,7 @@ const getStatusText = (status: string) => {
     case 'pending':
       return 'Pending'
     default:
-      return status.charAt(0).toUpperCase() + status.slice(1)
+      return 'Unknown'
   }
 }
 
@@ -62,9 +55,8 @@ const formatDate = (dateString: string): string => {
 const RecentScraperTasks: React.FC = () => {
   const router = useRouter()
   const { user } = useSupabase()
-  const { transactions, loading: statsLoading, refreshStats } = useUserStats()
+  const { data: recentTasks, error, isLoading, mutate: refreshTasks } = useRecentTasks(user?.id || '', 5)
   const { isActive, isVisible, justBecameVisible } = useActiveOnVisible({ pauseWhenHidden: true, resumeDelay: 2000 })
-  const [error, setError] = useState<string | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
   
   // Refs for managing subscription and preventing duplicate fetches
@@ -91,26 +83,21 @@ const RecentScraperTasks: React.FC = () => {
     }
     
     if (!user || !isMountedRef.current) {
-      if (isMountedRef.current) {
-        // setLoading(false)
-      }
       return
     }
     
     try {
-      setError(null)
       lastFetchTime.current = now
       
       console.log('RecentScraperTasks: Fetching tasks for user:', user.id)
       
-      // Refresh stats from the context
-      await refreshStats()
+      // Refresh tasks using SWR mutate
+      await refreshTasks()
     } catch (err) {
       if (!isMountedRef.current) return // Component unmounted during fetch
       console.error('Unexpected error:', err)
-      setError('An unexpected error occurred while loading tasks')
     }
-  }, [user?.id, isActive, refreshStats]) // Only depend on user.id, not the entire user object
+  }, [user?.id, isActive, refreshTasks])
   
   // Setup subscription and initial fetch
   React.useEffect(() => {
@@ -123,7 +110,7 @@ const RecentScraperTasks: React.FC = () => {
     if (userIdRef.current === user.id && subscriptionRef.current) {
       console.log('RecentScraperTasks: User unchanged, skipping re-initialization')
       // But still fetch tasks if we don't have any
-      if (transactions.length === 0) {
+      if ((recentTasks || []).length === 0) {
         fetchRecentTasks(true) // Force fetch if no tasks
       }
       return
@@ -156,14 +143,14 @@ const RecentScraperTasks: React.FC = () => {
         
         // Handle real-time updates without full re-fetch when possible
         if (payload.eventType === 'INSERT' && payload.new) {
-          // Refresh stats to get the new task
-          refreshStats()
+          // Refresh tasks to get the new task
+          refreshTasks()
         } else if (payload.eventType === 'UPDATE' && payload.new) {
-          // Refresh stats to get the updated task
-          refreshStats()
+          // Refresh tasks to get the updated task
+          refreshTasks()
         } else if (payload.eventType === 'DELETE' && payload.old) {
-          // Refresh stats to remove the deleted task
-          refreshStats()
+          // Refresh tasks to remove the deleted task
+          refreshTasks()
         } else {
           // For other events, do a throttled fetch only if page is active
           if (isActive) {
@@ -183,7 +170,7 @@ const RecentScraperTasks: React.FC = () => {
         subscriptionRef.current = null
       }
     }
-  }, [user?.id, transactions.length, refreshStats]) // Add transactions.length to dependencies
+  }, [user?.id, (recentTasks || []).length, refreshTasks]) // Add recentTasks.length to dependencies
   
   // Handle page visibility changes for refresh when returning to tab
   React.useEffect(() => {
@@ -211,8 +198,8 @@ const RecentScraperTasks: React.FC = () => {
     router.push('/dashboard/scrape')
   }
   
-  // Get the 5 most recent transactions
-  const recentTasks = transactions.slice(0, 5)
+  // Get the 5 most recent tasks
+  const tasks = recentTasks || []
 
   return (
     <Card>
@@ -223,29 +210,28 @@ const RecentScraperTasks: React.FC = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {statsLoading ? (
+        {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : error ? (
           <div className="text-center py-6">
-            <p className="text-sm text-red-500 mb-4">{error}</p>
+            <p className="text-sm text-red-500 mb-4">{error.message || 'An error occurred while loading tasks'}</p>
             <Button size="sm" onClick={() => {
-              setError(null)
               fetchRecentTasks(true) // Force retry
             }}>
               Retry
             </Button>
           </div>
-        ) : recentTasks.length > 0 ? (
+        ) : tasks.length > 0 ? (
           <div className="space-y-4">
-            {recentTasks.map((task) => (
+            {tasks.map((task) => (
               <div key={task.id} className="flex items-center justify-between border-b border-border pb-3 last:border-0 last:pb-0">
                 <div className="flex items-start space-x-3">
                   <div className="pt-0.5">{getStatusIcon(task.status)}</div>
                   <div>
                     <p className="font-medium text-sm">
-                      {task.search_query || 'Untitled search'}
+                      {task.category ? `${task.category} in ${task.country}` : 'Untitled search'}
                     </p>
                     <div className="flex items-center space-x-3 mt-1">
                       <span className="text-xs text-muted-foreground">

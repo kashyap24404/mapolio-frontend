@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Calculator, Play, CreditCard, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
-import { useScrapeData } from '@/contexts/ScrapeDataContext'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { DataType } from '@/components/scrape/types'
 
 interface ScrapeActionsProps {
   estimatedResults: number
@@ -16,6 +16,7 @@ interface ScrapeActionsProps {
   handleStartScraping: () => void
   category: string
   selectedDataTypes: string[] // Add this prop to get selected data types
+  dataTypes: DataType[] // Add dataTypes as a prop instead of using context
   isSubmitting?: boolean
   isLoading?: boolean // Global loading state from context
 }
@@ -28,12 +29,10 @@ export default function ScrapeActions({
   handleStartScraping,
   category,
   selectedDataTypes,
+  dataTypes,
   isSubmitting = false,
   isLoading = false
 }: ScrapeActionsProps) {
-  // Get all data types to check for additional credit costs
-  const { dataTypes } = useScrapeData()
-  
   // Get data types with credit increases
   const dataTypesWithExtraCost = dataTypes
     .filter(dt => selectedDataTypes.includes(dt.id) && dt.credits_increase)
