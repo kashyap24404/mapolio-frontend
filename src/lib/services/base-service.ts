@@ -10,16 +10,16 @@ interface RequestState {
 }
 
 const requestStates = new Map<string, RequestState>();
-const CIRCUIT_BREAKER_THRESHOLD = 3; // Reduced from 5 to 3
-const CIRCUIT_BREAKER_TIMEOUT = 30000; // Reduced from 60s to 30s
-const REQUEST_THROTTLE_MS = 500; // Reduced from 1s to 500ms
-const REQUEST_DEDUPLICATION_MS = 2000; // 2 seconds for request deduplication
+const CIRCUIT_BREAKER_THRESHOLD = 3; // Number of failures before opening circuit
+const CIRCUIT_BREAKER_TIMEOUT = 60000; // 60 seconds circuit breaker timeout
+const REQUEST_THROTTLE_MS = 1000; // 1 second request throttling
+const REQUEST_DEDUPLICATION_MS = 5000; // 5 seconds for request deduplication
 
 // Enhanced timeout wrapper with circuit breaker and intelligent retry
 export const withTimeoutAndRetry = async <T>(
   fn: () => Promise<T>, 
-  timeoutMs: number = 15000, // Reduced from 60s to 15s for better UX
-  retries: number = 2, // Reduced from 3 to 2
+  timeoutMs: number = 30000, // Increased default to 30 seconds
+  retries: number = 2, // Reduced default to 2 retries
   requestKey?: string
 ): Promise<T> => {
   const key = requestKey || 'default';
@@ -135,8 +135,8 @@ export const withTimeoutAndRetry = async <T>(
       }
       
       // Exponential backoff with jitter for better distribution
-      const baseDelay = 500 * Math.pow(2, i); // Reduced base delay
-      const jitter = Math.random() * 500; // Reduced jitter
+      const baseDelay = 1000 * Math.pow(2, i); // Base delay of 1 second
+      const jitter = Math.random() * 1000; // Jitter up to 1 second
       const delay = baseDelay + jitter;
       
       console.log(`Attempt ${i + 1} failed, retrying in ${Math.round(delay)}ms:`, (error as Error).message);

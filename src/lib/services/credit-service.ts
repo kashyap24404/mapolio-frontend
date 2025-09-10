@@ -13,7 +13,7 @@ export const creditService = {
             .select('*');
           return result;
         },
-        10000, // 10 second timeout
+        15000, // 15 second timeout
         2, // 2 retries
         'get-active-pricing-plan' // unique key
       );
@@ -52,7 +52,7 @@ export const creditService = {
             .single();
           return result;
         },
-        10000, // 10 second timeout
+        15000, // Increased to 15 seconds
         2, // 2 retries
         `get-user-credits-${userId}` // unique key
       );
@@ -66,6 +66,15 @@ export const creditService = {
         error: null 
       };
     } catch (error) {
+      // Handle timeout errors specifically
+      if (error instanceof Error && error.message.includes('timeout')) {
+        console.warn(`Network timeout while loading credits for user ${userId}. This may be due to tab inactivity.`);
+        // Return a special error that indicates a retry might help
+        return { 
+          credits: null, 
+          error: new Error('Network timeout - please refresh the page or check your connection') 
+        };
+      }
       return { credits: null, error };
     }
   },
@@ -83,7 +92,7 @@ export const creditService = {
             .single();
           return result;
         },
-        10000, // 10 second timeout
+        15000, // Increased to 15 seconds
         2, // 2 retries
         `get-current-credits-${userId}` // unique key
       );
@@ -107,7 +116,7 @@ export const creditService = {
             .single();
           return result;
         },
-        10000, // 10 second timeout
+        15000, // Increased to 15 seconds
         2, // 2 retries
         `update-credits-${userId}` // unique key
       );
@@ -134,7 +143,7 @@ export const creditService = {
             .limit(limit);
           return result;
         },
-        10000, // 10 second timeout
+        15000, // Increased to 15 seconds
         2, // 2 retries
         `get-purchase-history-${userId}` // unique key
       );

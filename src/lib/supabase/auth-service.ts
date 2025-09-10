@@ -7,8 +7,8 @@ import { withTimeoutAndRetry } from '@/lib/services/base-service'
 let visibilityDebounceTimer: NodeJS.Timeout | null = null;
 let lastVisibilityCheck = 0;
 let isVisibilityHandlerActive = false; // Flag to prevent multiple handlers
-const VISIBILITY_DEBOUNCE_MS = 3000; // 3 seconds - increased for better stability
-const MIN_CHECK_INTERVAL = 60000; // 60 seconds minimum between session checks - increased to reduce frequency
+const VISIBILITY_DEBOUNCE_MS = 5000; // Increased to 5 seconds for better stability
+const MIN_CHECK_INTERVAL = 120000; // Increased to 2 minutes minimum between session checks
 
 // Handle tab visibility changes to refresh session when user returns to tab
 export const setupVisibilityHandler = (user: any, setUser: Function, setProfile: Function, setCredits: Function) => {
@@ -46,40 +46,36 @@ export const setupVisibilityHandler = (user: any, setUser: Function, setProfile:
           async () => {
             return await supabase.auth.getSession();
           },
-          60000, // 60 second timeout
-          3, // 3 retries
+          30000, // Reduced timeout to 30 seconds
+          2, // Reduced retries to 2
           'check-session'
         );
         
-        // Only refresh if session is actually expired (with 10 minute buffer)
-        if (!session || (session.expires_at && new Date(session.expires_at * 1000) < new Date(Date.now() + 10 * 60 * 1000))) {
+        // Only refresh if session is actually expired (with 5 minute buffer)
+        if (!session || (session.expires_at && new Date(session.expires_at * 1000) < new Date(Date.now() + 5 * 60 * 1000))) {
           const { data: { session: refreshedSession }, error } = await withTimeoutAndRetry(
             async () => {
               return await supabase.auth.refreshSession();
             },
-            60000, // 60 second timeout
-            3, // 3 retries
+            30000, // Reduced timeout to 30 seconds
+            2, // Reduced retries to 2
             'refresh-session'
           );
           
           if (error) {
-            setUser(null);
-            setProfile(null);
-            setCredits(null);
+            // Don't force sign out on network errors - just log and continue
+            console.warn('Session refresh failed (network error), continuing with existing session:', error);
           } else if (refreshedSession?.user) {
             // Only update user if it's different to prevent unnecessary re-renders
             if (refreshedSession.user.id !== user.id) {
               setUser(refreshedSession.user);
             }
             // Profile and credits reload will be handled by the auth state change listener
-          } else {
-            setUser(null);
-            setProfile(null);
-            setCredits(null);
           }
         }
       } catch (error) {
         // Don't force sign out on network errors - just log and continue
+        console.warn('Visibility check failed (network error), continuing with existing session:', error);
       }
     }, VISIBILITY_DEBOUNCE_MS);
   };
