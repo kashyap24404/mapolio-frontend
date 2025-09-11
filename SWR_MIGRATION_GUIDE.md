@@ -33,8 +33,6 @@ The new modular architecture includes mutation hooks using `useSWRMutation`:
 - `useDeleteTask()` - Delete tasks
 
 #### User Mutations
-- `useUpdateUserStats()` - Update user statistics
-- `useAddTransaction()` - Add new transactions
 
 #### Scrape Data Mutations
 - `useRefreshScrapeData()` - Refresh all scrape data

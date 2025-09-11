@@ -74,7 +74,7 @@ export const ScrapeForm = dynamic(
 )
 
 export const TaskDetailContent = dynamic(
-  () => import('@/app/dashboard/results/[id]/components/TaskDetailContent'),
+  () => import('@/app/dashboard/results/[id]/components/TaskDetailContent').then(mod => ({ default: mod.TaskDetailContent })),
   {
     loading: () => <TaskDetailSkeleton />,
     ssr: false,
@@ -83,7 +83,7 @@ export const TaskDetailContent = dynamic(
 
 // Multi-select component (heavy due to complex interactions)
 export const MultiSelect = dynamic(
-  () => import('@/components/ui/multi-select'),
+  () => import('@/components/ui/multi-select').then(mod => ({ default: mod.MultiSelect })),
   {
     loading: () => <Skeleton className="h-10 w-full" />,
     ssr: false,

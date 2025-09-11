@@ -12,7 +12,29 @@ export interface ScrapingTaskDB {
   rating: string;
   config?: {
     search_query?: string;
-    location_rules?: string[];
+    location_rules?: {
+      base: Array<{
+        type: 'country' | 'state' | 'county' | 'city' | 'zip';
+        name?: string;
+        state?: string;
+        county?: string;
+        zip_code?: string;
+      }>;
+      include?: Array<{
+        type: 'country' | 'state' | 'county' | 'city' | 'zip';
+        name?: string;
+        state?: string;
+        county?: string;
+        zip_code?: string;
+      }>;
+      exclude?: Array<{
+        type: 'country' | 'state' | 'county' | 'city' | 'zip';
+        name?: string;
+        state?: string;
+        county?: string;
+        zip_code?: string;
+      }>;
+    };
     data_fields?: string[];
     rating_filter?: string;
     advanced_options?: {

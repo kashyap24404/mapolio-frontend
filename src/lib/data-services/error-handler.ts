@@ -19,6 +19,7 @@ export class ErrorHandler {
     // Supabase errors
     if (error?.code) {
       return {
+        name: 'ServiceError',
         message: error.message || 'Database operation failed',
         code: error.code,
         details: error.details,
@@ -28,6 +29,7 @@ export class ErrorHandler {
     // Network errors
     if (error?.message?.includes('Network')) {
       return {
+        name: 'ServiceError',
         message: 'Network connection failed. Please check your internet connection.',
         code: 'NETWORK_ERROR',
       };
@@ -36,6 +38,7 @@ export class ErrorHandler {
     // Timeout errors
     if (error?.message?.includes('timeout')) {
       return {
+        name: 'ServiceError',
         message: 'Request timed out. Please try again.',
         code: 'TIMEOUT_ERROR',
       };
@@ -43,6 +46,7 @@ export class ErrorHandler {
 
     // Default error
     return {
+      name: 'ServiceError',
       message: error?.message || 'An unexpected error occurred',
       code: 'UNKNOWN_ERROR',
       details: error,

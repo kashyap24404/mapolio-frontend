@@ -1,7 +1,21 @@
 // Define the config structure instead of using any
+interface LocationRule {
+  type: 'country' | 'state' | 'county' | 'city' | 'zip'
+  name?: string
+  state?: string
+  county?: string
+  zip_code?: string
+}
+
+interface LocationRules {
+  base: LocationRule[]
+  include?: LocationRule[]
+  exclude?: LocationRule[]
+}
+
 interface TaskConfig {
   search_query?: string;
-  location_rules?: string[];
+  location_rules?: LocationRules;
   data_fields?: string[];
   rating_filter?: string;
   advanced_options?: {
@@ -41,22 +55,7 @@ export interface ScrapeFormState {
 }
 
 // Define a more specific type for location data
-interface LocationData {
-  // Define the structure based on your actual location data
-  states?: Array<{
-    id: string;
-    name: string;
-    counties?: Array<{
-      id: string;
-      name: string;
-      cities?: Array<{
-        id: string;
-        name: string;
-        zipCodes?: string[];
-      }>;
-    }>;
-  }>;
-}
+import { LocationData } from '@/components/scrape/types'
 
 export interface LocationDataState {
   locationData: LocationData | null;

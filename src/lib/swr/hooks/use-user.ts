@@ -1,5 +1,4 @@
 import useSWR from 'swr';
-import useSWRMutation from 'swr/mutation';
 import { UserService } from '@/lib/data-services';
 import { UserStats, Transaction, PurchaseHistory } from '@/stores/user-store';
 import { swrKeys, swrConfigs } from '../config';
@@ -47,28 +46,5 @@ export function usePurchaseHistory(userId: string, limit: number = 20) {
     userId ? [...swrKeys.purchaseHistory(), userId, limit] : null,
     fetchPurchaseHistory,
     swrConfigs.user
-  );
-}
-
-// Mutation hooks
-export function useUpdateUserStats() {
-  return useSWRMutation(
-    swrKeys.userStats(),
-    async (_, { arg }: { arg: Partial<UserStats> }) => {
-      const response = await userService.updateUserStats(arg);
-      if (response.error) throw new Error(response.error);
-      return response.data;
-    }
-  );
-}
-
-export function useAddTransaction() {
-  return useSWRMutation(
-    swrKeys.transactions(),
-    async (_, { arg }: { arg: Transaction }) => {
-      const response = await userService.addTransaction(arg);
-      if (response.error) throw new Error(response.error);
-      return response.data;
-    }
   );
 }

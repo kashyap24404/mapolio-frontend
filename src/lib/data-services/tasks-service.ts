@@ -51,8 +51,24 @@ export class TasksService {
   // Helper method to extract location information from config
   private extractLocationFromConfig(config: any): string {
     try {
+      // Define the location rule interface inline to avoid circular dependencies
+      interface LocationRule {
+        type: 'country' | 'state' | 'county' | 'city' | 'zip';
+        name?: string;
+        state?: string;
+        county?: string;
+        zip_code?: string;
+        value?: string;
+      }
+      
+      interface LocationRules {
+        base: LocationRule[];
+        include?: LocationRule[];
+        exclude?: LocationRule[];
+      }
+      
       if (config.location_rules?.include?.length > 0) {
-        const locations = config.location_rules.include.map((rule: any) => {
+        const locations = config.location_rules.include.map((rule: LocationRule) => {
           if (rule.type === 'zip' && rule.zip_code) {
             return `ZIP ${rule.zip_code}`;
           }
@@ -62,7 +78,7 @@ export class TasksService {
       }
       
       if (config.location_rules?.base?.length > 0) {
-        const locations = config.location_rules.base.map((rule: any) => {
+        const locations = config.location_rules.base.map((rule: LocationRule) => {
           return rule.name || rule.value || 'Unknown';
         });
         return locations.join(', ');

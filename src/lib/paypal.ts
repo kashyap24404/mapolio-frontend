@@ -1,8 +1,7 @@
-import { PayPalEnvironment, PayPalHttpClient } from '@paypal/checkout-server-sdk';
 import * as paypal from '@paypal/checkout-server-sdk';
 
 // This function creates a PayPal client with the appropriate environment
-export function paypalClient(): PayPalHttpClient {
+export function paypalClient(): paypal.core.PayPalHttpClient {
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
   

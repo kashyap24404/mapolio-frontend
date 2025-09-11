@@ -81,7 +81,10 @@ export const LocationNodeComponent: React.FC<LocationNodeProps> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  !disabled && onToggleExpansion(node.id, node) // Disable click when disabled
+                  // Disable click when disabled
+                  if (!disabled) {
+                    onToggleExpansion(node.id, node)
+                  }
                 }}
                 className="p-0.5 hover:bg-muted-foreground/20 rounded"
                 disabled={isLoading || disabled} // Disable when loading or disabled

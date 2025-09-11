@@ -10,6 +10,14 @@ import {
 } from 'lucide-react'
 import { Task } from '../../[id]/types'
 
+interface LocationRule {
+  type: 'country' | 'state' | 'county' | 'city' | 'zip'
+  name?: string
+  state?: string
+  county?: string
+  zip_code?: string
+}
+
 interface TaskDetailHeaderProps {
   task: Task
   onBack: () => void
@@ -48,10 +56,10 @@ export function TaskDetailHeader({ task, onBack }: TaskDetailHeaderProps) {
         const locationRules = task.config.location_rules
         // Extract meaningful location info from the location rules
         if (locationRules.include && locationRules.include.length > 0) {
-          return locationRules.include.map((rule: any) => rule.name || rule.zip_code).join(', ')
+          return locationRules.include.map((rule: LocationRule) => rule.name || rule.zip_code).join(', ')
         }
         if (locationRules.base && locationRules.base.length > 0) {
-          return locationRules.base.map((rule: any) => rule.name || rule.zip_code).join(', ')
+          return locationRules.base.map((rule: LocationRule) => rule.name || rule.zip_code).join(', ')
         }
       }
       return task.config?.search_query || 'Multiple locations'

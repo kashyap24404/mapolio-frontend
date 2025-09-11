@@ -2,6 +2,8 @@ import { supabase } from '@/lib/supabase/client'
 import { loadUserProfile } from '@/lib/supabase/user-service'
 import { loadPricingPlan } from '@/lib/supabase/pricing-service'
 import { withTimeoutAndRetry } from '@/lib/services/base-service'
+import { User } from '@supabase/supabase-js'
+import { Profile, UserCredits } from './types'
 
 // Debounce utility for visibility changes
 let visibilityDebounceTimer: NodeJS.Timeout | null = null;
@@ -15,7 +17,7 @@ export const setupVisibilityHandler = (
   user: User | null, 
   setUser: (user: User | null) => void, 
   setProfile: (profile: Profile | null) => void, 
-  setCredits: (credits: Credits | null) => void
+  setCredits: (credits: UserCredits | null) => void
 ) => {
   // Prevent multiple handlers from being set up
   if (isVisibilityHandlerActive) {
@@ -103,7 +105,7 @@ export const signIn = async (
   setLoading: (loading: boolean) => void,
   setUser: (user: User | null) => void,
   setProfile: (profile: Profile | null) => void,
-  setCredits: (credits: Credits | null) => void
+  setCredits: (credits: UserCredits | null) => void
 ) => {
   setLoading(true)
   try {
@@ -145,7 +147,7 @@ export const signUp = async (
   setLoading: (loading: boolean) => void,
   setUser: (user: User | null) => void,
   setProfile: (profile: Profile | null) => void,
-  setCredits: (credits: Credits | null) => void
+  setCredits: (credits: UserCredits | null) => void
 ) => {
   setLoading(true)
   try {
@@ -197,7 +199,7 @@ export const signUp = async (
 export const signOut = async (
   setUser: (user: User | null) => void,
   setProfile: (profile: Profile | null) => void,
-  setCredits: (credits: Credits | null) => void
+  setCredits: (credits: UserCredits | null) => void
 ) => {
   try {
     await supabase.auth.signOut()
