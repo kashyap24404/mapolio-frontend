@@ -11,11 +11,13 @@ import {
   User, 
   CreditCard,
   Tag,
-  Receipt
+  Receipt,
+  X
 } from '@/lib/icons'
 
 interface SidebarProps {
   className?: string
+  onClose?: () => void
 }
 
 const sidebarItems = [
@@ -56,7 +58,7 @@ const sidebarItems = [
   }
 ]
 
-const DashboardSidebar: React.FC<SidebarProps> = ({ className }) => {
+const DashboardSidebar: React.FC<SidebarProps> = ({ className, onClose }) => {
   const pathname = usePathname()
 
   // Improved active state detection to work with nested routes
@@ -70,14 +72,28 @@ const DashboardSidebar: React.FC<SidebarProps> = ({ className }) => {
 
   return (
     <div className={cn("flex flex-col w-64 bg-background border-r border-border relative", className)}>
+      {/* Mobile Close Button */}
+      <div className="md:hidden absolute top-4 right-4">
+        <button 
+          className="p-2 rounded-md hover:bg-muted"
+          onClick={onClose}
+        >
+          <X className="h-5 w-5 text-muted-foreground" />
+        </button>
+      </div>
+      
       {/* Navigation Items */}
-      <nav className="px-4 py-6 space-y-2 pb-16">
+      <nav className="px-4 py-6 space-y-2 pb-16 mt-8 md:mt-0">
         {sidebarItems.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
           
           return (
-            <Link key={item.name} href={item.href}>
+            <Link 
+              key={item.name} 
+              href={item.href}
+              onClick={onClose}
+            >
               <div className={cn(
                 "flex items-center space-x-3 px-3 py-3 rounded-lg text-sm transition-colors",
                 active 
