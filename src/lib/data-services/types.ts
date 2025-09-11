@@ -55,18 +55,17 @@ export interface UserStatsResponse {
 }
 
 // Error types
-export interface ServiceError {
-  message: string;
+export interface ServiceError extends Error {
   code?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 // Real-time subscription options
 export interface SubscriptionOptions {
   channel: string;
   event: string;
-  callback: (payload: any) => void;
-  filter?: Record<string, any>;
+  callback: (payload: Record<string, unknown>) => void;
+  filter?: Record<string, unknown>;
 }
 
 // Retry configuration

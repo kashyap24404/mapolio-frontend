@@ -6,12 +6,20 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 export interface ScrapingTaskDB {
   id: string;
   user_id: string;
-  config: {
-    category?: string;
-    country?: string;
-    data_type?: string;
-    rating?: string;
-    [key: string]: any;
+  category: string;
+  country: string;
+  data_type: string;
+  rating: string;
+  config?: {
+    search_query?: string;
+    location_rules?: string[];
+    data_fields?: string[];
+    rating_filter?: string;
+    advanced_options?: {
+      extract_single_image?: boolean;
+      max_reviews?: number;
+    };
+    [key: string]: string | string[] | boolean | number | undefined | object;
   };
   status: 'pending' | 'running' | 'completed' | 'failed';
   progress: number;

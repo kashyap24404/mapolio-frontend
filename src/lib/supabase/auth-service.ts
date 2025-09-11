@@ -11,7 +11,12 @@ const VISIBILITY_DEBOUNCE_MS = 5000; // Increased to 5 seconds for better stabil
 const MIN_CHECK_INTERVAL = 120000; // Increased to 2 minutes minimum between session checks
 
 // Handle tab visibility changes to refresh session when user returns to tab
-export const setupVisibilityHandler = (user: any, setUser: Function, setProfile: Function, setCredits: Function) => {
+export const setupVisibilityHandler = (
+  user: User | null, 
+  setUser: (user: User | null) => void, 
+  setProfile: (profile: Profile | null) => void, 
+  setCredits: (credits: Credits | null) => void
+) => {
   // Prevent multiple handlers from being set up
   if (isVisibilityHandlerActive) {
     return () => {};
@@ -95,10 +100,10 @@ export const setupVisibilityHandler = (user: any, setUser: Function, setProfile:
 export const signIn = async (
   email: string, 
   password: string, 
-  setLoading: Function,
-  setUser: Function,
-  setProfile: Function,
-  setCredits: Function
+  setLoading: (loading: boolean) => void,
+  setUser: (user: User | null) => void,
+  setProfile: (profile: Profile | null) => void,
+  setCredits: (credits: Credits | null) => void
 ) => {
   setLoading(true)
   try {
@@ -137,10 +142,10 @@ export const signUp = async (
   email: string, 
   password: string, 
   displayName: string | undefined,
-  setLoading: Function,
-  setUser: Function,
-  setProfile: Function,
-  setCredits: Function
+  setLoading: (loading: boolean) => void,
+  setUser: (user: User | null) => void,
+  setProfile: (profile: Profile | null) => void,
+  setCredits: (credits: Credits | null) => void
 ) => {
   setLoading(true)
   try {
@@ -190,9 +195,9 @@ export const signUp = async (
 }
 
 export const signOut = async (
-  setUser: Function,
-  setProfile: Function,
-  setCredits: Function
+  setUser: (user: User | null) => void,
+  setProfile: (profile: Profile | null) => void,
+  setCredits: (credits: Credits | null) => void
 ) => {
   try {
     await supabase.auth.signOut()

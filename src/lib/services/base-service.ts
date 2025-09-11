@@ -94,17 +94,21 @@ export const withTimeoutAndRetry = async <T>(
         requestStates.set(key, state);
         
         return result;
-      } catch (raceError) {
+      } catch (error) {
         clearTimeout(timeoutId);
-        throw raceError;
+        throw error;
       }
     } catch (error) {
       lastError = error;
       
       // Check if this is an authentication error that might be resolved by refreshing the session
-      if ((error as Error)?.message?.includes('JWT expired') || 
-          (error as any)?.code === 'PGRST301' || 
-          (error as any)?.status === 401) {
+      const errorMessage = (error as Error)?.message || '';
+      const errorCode = (error as { code?: string })?.code || '';
+      const errorStatus = (error as { status?: number })?.status || 0;
+      
+      if (errorMessage.includes('JWT expired') || 
+          errorCode === 'PGRST301' || 
+          errorStatus === 401) {
         try {
           // Try to refresh the session
           const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();

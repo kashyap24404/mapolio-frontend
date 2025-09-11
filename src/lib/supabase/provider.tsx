@@ -10,7 +10,7 @@ import { setupVisibilityHandler, signIn, signUp, signOut } from './auth-service'
 import { refreshCredits, purchaseCredits, useCredits } from './credit-service'
 import { updateProfile } from './user-service'
 import { SupabaseContextType, Profile, UserCredits, PricingPlan } from './types'
-import { User } from '@supabase/supabase-js'
+import { User, Session } from '@supabase/supabase-js'
 
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -96,7 +96,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         (userId: string) => loadUserCredits(userId, stableSetCredits)
       )
     },
-    updateProfile: async (updates: { display_name?: string; notification_settings?: Record<string, any> }) => {
+    updateProfile: async (updates: { display_name?: string; notification_settings?: Record<string, unknown> }) => {
       if (!user || !profile) {
         return { success: false, error: { message: 'User not authenticated' } }
       }
@@ -162,7 +162,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: any, session: any) => {
+      async (event: string, session: Session | null) => {
         if (!isMounted) return
         
         if (session?.user) {
