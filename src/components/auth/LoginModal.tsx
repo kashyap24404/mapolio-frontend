@@ -303,7 +303,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
                     </>
                   ) : (
                     <>
-                      Don't have an account?{' '}
+                      Do not have an account?{' '}
                       <span className="font-medium">Sign up</span>
                     </>
                   )}

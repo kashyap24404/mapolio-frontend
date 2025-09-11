@@ -124,7 +124,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground mb-4">
-                This section encountered an error and couldn't load properly.
+                This section encountered an error and could not load properly.
               </p>
               <div className="flex space-x-2">
                 <Button
@@ -160,7 +160,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground mb-6">
-                We're sorry, but something unexpected happened. Please try refreshing the page or go back to the home page.
+                We are sorry, but something unexpected happened. Please try refreshing the page or go back to the home page.
               </p>
               <div className="flex flex-col space-y-2">
                 <Button

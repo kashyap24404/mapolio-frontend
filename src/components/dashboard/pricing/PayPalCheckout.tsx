@@ -4,10 +4,16 @@ import React from 'react'
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js"
 import { useSupabase } from '@/lib/supabase/index'
 
+// Define the user type
+interface User {
+  id: string;
+  // Add other user properties as needed
+}
+
 interface PayPalCheckoutProps {
   currentCredits: number
   setShowPayPal: (show: boolean) => void
-  user: any
+  user: User | null
 }
 
 export default function PayPalCheckout({
@@ -48,7 +54,12 @@ export default function PayPalCheckout({
       return data.orderId
     } catch (err) {
       console.error('Detailed error creating PayPal order:', err)
-      throw err
+      // Type guard for error
+      if (err instanceof Error) {
+        throw err
+      } else {
+        throw new Error('Unknown error occurred')
+      }
     }
   }
   

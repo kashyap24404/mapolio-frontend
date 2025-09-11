@@ -76,7 +76,7 @@ const DashboardGrid: React.FC = () => {
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-semibold text-foreground mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back, {profile.display_name || 'User'}. Here's what's happening with your scraping projects.</p>
+        <p className="text-muted-foreground">Welcome back, {profile.display_name || 'User'}. Here is what is happening with your scraping projects.</p>
       </div>
 
       {/* Grid Layout */}

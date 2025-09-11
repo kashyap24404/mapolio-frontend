@@ -3,6 +3,18 @@ import * as paypal from '@paypal/checkout-server-sdk';
 import { paypalClient } from '@/lib/paypal';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 
+// Define types for PayPal response
+interface PayPalLink {
+  href: string;
+  rel: string;
+  method: string;
+}
+
+interface PayPalOrderResponse {
+  id: string;
+  links: PayPalLink[];
+}
+
 // Function to get the active pricing plan
 async function getActivePricingPlan() {
   try {
@@ -102,22 +114,22 @@ export async function POST(req: NextRequest) {
 
     // Execute request
     const client = paypalClient();
-    const response = await client.execute(request);
+    const response = await client.execute(request) as { result: PayPalOrderResponse };
 
     // Find and return approval URL for redirect
-    const approvalUrl = response.result.links.find((link: any) => link.rel === "approve")?.href;
+    const approvalUrl = response.result.links.find((link: PayPalLink) => link.rel === "approve")?.href;
 
     return NextResponse.json({
       orderId: response.result.id,
       approvalUrl
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("PayPal order creation error:", error);
     
     // Provide more detailed error information
     let errorMessage = "Failed to create PayPal order";
-    if (error.message) {
+    if (error instanceof Error && error.message) {
       errorMessage += ": " + error.message;
     }
     

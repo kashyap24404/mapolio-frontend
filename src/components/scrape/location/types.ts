@@ -1,3 +1,21 @@
+// Define a more specific type for location data
+interface LocationData {
+  // Define the structure based on your actual location data
+  states?: Array<{
+    id: string;
+    name: string;
+    counties?: Array<{
+      id: string;
+      name: string;
+      cities?: Array<{
+        id: string;
+        name: string;
+        zipCodes?: string[];
+      }>;
+    }>;
+  }>;
+}
+
 export interface LocationNode {
   id: string
   name: string
@@ -11,7 +29,7 @@ export interface LocationNode {
 }
 
 export interface LocationDropdownProps {
-  locationData: any | null
+  locationData: LocationData | null
   selectedPaths: string[][]
   onLocationChange: (paths: string[][]) => void
   loadingLocationData: boolean

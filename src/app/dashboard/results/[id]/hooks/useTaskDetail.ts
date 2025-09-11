@@ -5,11 +5,34 @@ import { useTasksData } from '@/contexts/TasksDataContext'
 import { useTask } from '@/lib/swr/hooks/use-tasks'
 import { Task } from '../types'
 
-export function useTaskDetail(user: any, taskId: string | null) {
-  let tasks: any[] = [];
+// Define the user type
+interface User {
+  id: string;
+  // Add other user properties as needed
+}
+
+// Define the scraping task type
+interface ScrapingTask {
+  id: string;
+  status: string;
+  progress?: number;
+  error_message?: string;
+  created_at: string;
+  updated_at?: string;
+  category?: string;
+  country?: string;
+  total_records?: number;
+  processed_records?: number;
+  config?: any; // We'll keep this as any for now since it's complex
+  result_json_url?: string;
+  result_csv_url?: string;
+}
+
+export function useTaskDetail(user: User | null, taskId: string | null) {
+  let tasks: Task[] = [];
   let tasksLoading = true;
   let tasksError: string | null = null;
-  let getTaskById: (id: string) => any = (id: string) => undefined;
+  let getTaskById: (id: string) => Task | undefined = (id: string) => undefined;
   
   // Try to use the context, but handle gracefully if not available
   try {
@@ -56,7 +79,7 @@ export function useTaskDetail(user: any, taskId: string | null) {
       // Convert ScrapingTask to Task format for compatibility
       foundTask = {
         id: specificTask.id,
-        status: specificTask.status,
+        status: specificTask.status as 'running' | 'completed' | 'failed',
         progress: specificTask.progress,
         message: specificTask.error_message,
         created_at: specificTask.created_at,

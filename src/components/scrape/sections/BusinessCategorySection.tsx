@@ -102,7 +102,7 @@ const BusinessCategorySection = memo<BusinessCategorySectionProps>(function Busi
           </Select>
         )}
         <p className="text-xs text-muted-foreground">
-          Use specific terms like "Italian restaurants" or "24-hour pharmacies" for better targeting.
+          Use specific terms like {'"'}Italian restaurants{'"'} or {'"'}24-hour pharmacies{'"'} for better targeting.
         </p>
       </div>
     )
