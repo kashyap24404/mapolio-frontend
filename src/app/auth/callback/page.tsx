@@ -15,28 +15,76 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession()
+        // Get URL parameters (Supabase email verification links use query parameters)
+        const urlParams = new URLSearchParams(window.location.search)
+        const accessToken = urlParams.get('access_token')
+        const refreshToken = urlParams.get('refresh_token')
+        const tokenType = urlParams.get('token_type')
+        const type = urlParams.get('type')
         
-        if (error) {
-          console.error('Auth callback error:', error)
-          setStatus('error')
-          setMessage('Failed to verify email. Please try again.')
-          return
-        }
-
-        if (data.session) {
-          // User successfully verified email and signed in
-          setStatus('success')
-          setMessage('Email verified successfully! Redirecting to dashboard...')
+        // Check if this is an email verification callback
+        if (type === 'signup' && accessToken && refreshToken && tokenType) {
+          // Set the session using the tokens from the URL
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
           
-          // Redirect to dashboard after a short delay
-          setTimeout(() => {
-            router.push('/dashboard')
-          }, 2000)
+          if (error) {
+            console.error('Auth callback error:', error)
+            setStatus('error')
+            setMessage('Failed to verify email. Please try again.')
+            return
+          }
+
+          if (data.session) {
+            // User successfully verified email and signed in
+            setStatus('success')
+            setMessage('Email verified successfully! Redirecting to dashboard...')
+            
+            // Redirect to dashboard after a short delay
+            setTimeout(() => {
+              router.push('/dashboard')
+            }, 2000)
+          } else {
+            // No session found
+            setStatus('error')
+            setMessage('Verification failed. Please check your email link.')
+          }
+        } else if (type === 'signup') {
+          // This might be a callback without tokens, which means the user
+          // clicked the link but the session might already be established
+          // Let's check if there's already a session
+          const { data: { session } } = await supabase.auth.getSession()
+          
+          if (session?.user) {
+            setStatus('success')
+            setMessage('Email verified successfully! Redirecting to dashboard...')
+            
+            // Redirect to dashboard after a short delay
+            setTimeout(() => {
+              router.push('/dashboard')
+            }, 2000)
+          } else {
+            // Try to get the session again after a short delay
+            setTimeout(async () => {
+              const { data: { session: delayedSession } } = await supabase.auth.getSession()
+              if (delayedSession?.user) {
+                setStatus('success')
+                setMessage('Email verified successfully! Redirecting to dashboard...')
+                setTimeout(() => {
+                  router.push('/dashboard')
+                }, 2000)
+              } else {
+                setStatus('error')
+                setMessage('Verification failed. Please check your email link.')
+              }
+            }, 3000)
+          }
         } else {
-          // No session found
+          // Not a signup verification link
           setStatus('error')
-          setMessage('Verification failed. Please check your email link.')
+          setMessage('Invalid verification link.')
         }
       } catch (err) {
         console.error('Unexpected error:', err)
@@ -45,16 +93,7 @@ export default function AuthCallback() {
       }
     }
 
-    // Check URL for auth tokens
-    const hashParams = new URLSearchParams(window.location.hash.substring(1))
-    const accessToken = hashParams.get('access_token')
-    
-    if (accessToken) {
-      handleAuthCallback()
-    } else {
-      setStatus('error')
-      setMessage('Invalid verification link.')
-    }
+    handleAuthCallback()
   }, [router])
 
   const handleReturnHome = () => {
