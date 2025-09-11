@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useSupabase } from '@/lib/supabase/index'
 import { useIntegratedUserData } from '@/lib/hooks'
+import { useIntegratedTasksData } from '@/lib/hooks'
 import { 
   CreditCard, 
   Search,
@@ -25,10 +26,19 @@ const DashboardGrid: React.FC = () => {
     isLoading: statsLoading 
   } = useIntegratedUserData(profile?.id || null)
   
+  // Get tasks data to calculate results properly
+  const { tasks } = useIntegratedTasksData(profile?.id || null)
+  
   // Transform UserStats to TaskStats format for UI compatibility
+  // Calculate results based on completed tasks with total_results
   const taskStats = userStats ? {
     searches: userStats.totalTasks,
-    results: 0,
+    results: tasks?.reduce((sum, task) => {
+      if (task.status === 'completed') {
+        return sum + (task.total_results || 0);
+      }
+      return sum;
+    }, 0) || 0,
     creditsUsed: userStats.usedCredits,
     pendingTasks: userStats.totalTasks - userStats.completedTasks - userStats.failedTasks
   } : null

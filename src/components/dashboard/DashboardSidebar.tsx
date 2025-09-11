@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Search, 
   FileText, 
-  Settings, 
   User, 
   CreditCard,
   Tag,
@@ -54,11 +53,6 @@ const sidebarItems = [
     name: 'Profile',
     href: '/dashboard/profile',
     icon: User
-  },
-  {
-    name: 'Settings',
-    href: '/dashboard/settings',
-    icon: Settings
   }
 ]
 
