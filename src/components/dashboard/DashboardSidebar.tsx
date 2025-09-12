@@ -71,7 +71,7 @@ const DashboardSidebar: React.FC<SidebarProps> = ({ className, onClose }) => {
   }
 
   return (
-    <div className={cn("flex flex-col w-64 bg-background border-r border-border relative", className)}>
+    <div className={cn("flex flex-col w-60 bg-background border-r border-border relative", className)}> {/* Changed from w-64 to w-60 for better spacing */}
       {/* Mobile Close Button */}
       <div className="md:hidden absolute top-4 right-4">
         <button 

@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/site/Navbar'
-import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
 import { PricingLayout, PricingHeader } from '@/components/dashboard/pricing'
 import { useSupabase } from '@/lib/supabase/index'
 
@@ -51,37 +49,27 @@ export default function PricingPage() {
   }
   
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      
-      <div className="flex pt-14">
-        <DashboardSidebar className="fixed left-0 top-14 h-[calc(100vh-3.5rem)]" />
+    <div className="py-8 px-6">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-2xl font-semibold text-foreground mb-6">Pricing</h1>
         
-        <main className="flex-1 ml-64">
-          <div className="py-8 px-6">
-            <div className="max-w-5xl mx-auto">
-              <h1 className="text-2xl font-semibold text-foreground mb-6">Pricing</h1>
-              
-              <PricingHeader />
-              
-              <PricingLayout
-                minCredits={minCredits}
-                maxCredits={maxCredits}
-                currentCredits={currentCredits}
-                pricePerCredit={pricePerCredit}
-                totalPrice={totalPrice}
-                pricingPlan={pricingPlan}
-                onCreditsChange={handleCreditsChange}
-                onPurchase={handlePurchase}
-                isLoading={isLoading}
-                user={user}
-                error={error}
-                showPayPal={showPayPal}
-                setShowPayPal={setShowPayPal}
-              />
-            </div>
-          </div>
-        </main>
+        <PricingHeader />
+        
+        <PricingLayout
+          minCredits={minCredits}
+          maxCredits={maxCredits}
+          currentCredits={currentCredits}
+          pricePerCredit={pricePerCredit}
+          totalPrice={totalPrice}
+          pricingPlan={pricingPlan}
+          onCreditsChange={handleCreditsChange}
+          onPurchase={handlePurchase}
+          isLoading={isLoading}
+          user={user}
+          error={error}
+          showPayPal={showPayPal}
+          setShowPayPal={setShowPayPal}
+        />
       </div>
     </div>
   )

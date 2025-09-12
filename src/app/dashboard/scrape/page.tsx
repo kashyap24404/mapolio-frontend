@@ -1,8 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import Navbar from '@/components/site/Navbar'
-import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
 import { useSupabase } from '@/lib/supabase/index'
 import { useIntegratedScrapeData } from '@/lib/hooks'
 import { useScrapeForm } from './hooks/useScrapeForm'
@@ -69,43 +67,35 @@ export default function ScrapePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      
-      <div className="flex pt-14">
-        <DashboardSidebar className="fixed left-0 top-14 h-[calc(100vh-3.5rem)]" />
-        
-        <main className="flex-1 ml-64">
-          <DataFetchErrorBoundary
-            onError={(error, errorInfo) => {
-              console.error('Scrape data error:', error, errorInfo)
-            }}
-          >
-            <FormErrorBoundary
-              onError={(error, errorInfo) => {
-                console.error('Scrape form error:', error, errorInfo)
-              }}
-            >
-              <ScrapeContent
-                formState={formState}
-                locationState={locationState}
-                locationError={locationError}
-                categories={categories}
-                countries={countries}
-                dataTypes={dataTypes}
-                ratings={ratings}
-                credits={credits}
-                isLoading={scrapeDataLoading || authLoading}
-                updateFormState={updateFormState}
-                handleDataTypeChange={handleDataTypeChange}
-                handleBulkDataTypeSelection={handleBulkDataTypeSelection}
-                handleEstimate={handleEstimate}
-                handleStartScraping={handleStartScraping}
-              />
-            </FormErrorBoundary>
-          </DataFetchErrorBoundary>
-        </main>
-      </div>
+    <div className="py-8 px-6">
+      <DataFetchErrorBoundary
+        onError={(error, errorInfo) => {
+          console.error('Scrape data error:', error, errorInfo)
+        }}
+      >
+        <FormErrorBoundary
+          onError={(error, errorInfo) => {
+            console.error('Scrape form error:', error, errorInfo)
+          }}
+        >
+          <ScrapeContent
+            formState={formState}
+            locationState={locationState}
+            locationError={locationError}
+            categories={categories}
+            countries={countries}
+            dataTypes={dataTypes}
+            ratings={ratings}
+            credits={credits}
+            isLoading={scrapeDataLoading || authLoading}
+            updateFormState={updateFormState}
+            handleDataTypeChange={handleDataTypeChange}
+            handleBulkDataTypeSelection={handleBulkDataTypeSelection}
+            handleEstimate={handleEstimate}
+            handleStartScraping={handleStartScraping}
+          />
+        </FormErrorBoundary>
+      </DataFetchErrorBoundary>
     </div>
   )
 }

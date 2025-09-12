@@ -79,7 +79,7 @@ const DashboardPage: React.FC = () => {
         )}
         
         {/* Main Content */}
-        <main className="flex-1 md:ml-64 w-full pt-16 md:pt-0"> {/* ml-64 to account for sidebar width on desktop, pt-16 for mobile menu */}
+        <main className="flex-1 md:ml-60 w-full pt-16 md:pt-0"> {/* Changed from md:ml-0 to md:ml-60 to align with sidebar width */}
           <DashboardGrid />
         </main>
       </div>
