@@ -45,7 +45,7 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Navbar */}
-      <Navbar />
+      {/* <Navbar /> */}
       
       {/* Main Layout with Sidebar */}
       <div className="flex pt-14"> {/* pt-14 to account for fixed navbar */}
@@ -79,7 +79,7 @@ const DashboardPage: React.FC = () => {
         )}
         
         {/* Main Content */}
-        <main className="flex-1 md:ml-60 w-full pt-16 md:pt-0"> {/* Changed from md:ml-0 to md:ml-60 to align with sidebar width */}
+        <main className="flex-1 md:ml-0 w-full pt-16 md:pt-0"> 
           <DashboardGrid />
         </main>
       </div>
