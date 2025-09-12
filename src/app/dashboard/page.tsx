@@ -79,7 +79,7 @@ const DashboardPage: React.FC = () => {
         )}
         
         {/* Main Content */}
-        <main className="flex-1 md:ml-0 w-full pt-16 md:pt-0"> 
+        <main className="flex-1 md:ml-0 md:px-10 w-full pt-16 md:pt-0"> 
           <DashboardGrid />
         </main>
       </div>
