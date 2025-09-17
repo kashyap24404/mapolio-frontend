@@ -4,7 +4,8 @@ import { LocationNode, SelectionState, BulkSelectionType } from './types'
 export const useLocationSelection = (
   selectedPaths: string[][], 
   onLocationChange: (paths: string[][]) => void,
-  getAllPathsAtLevel?: (level: number) => string[][]
+  getAllPathsAtLevel?: (level: number) => string[][],
+  locationData?: any
 ) => {
   // Utility function to compare arrays
   const arraysEqual = (a: string[], b: string[]): boolean => {
@@ -27,6 +28,54 @@ export const useLocationSelection = (
     })
   }, [selectedPaths])
 
+  // Get all child paths for a given node
+  const getAllChildPaths = useCallback((node: LocationNode): string[][] => {
+    if (!locationData?.data) return []
+    
+    const [state, county, city] = node.path
+    const childPaths: string[][] = []
+    
+    if (node.level === 0) {
+      // State level - get all counties, cities, and zip codes
+      const stateData = locationData.data[state]
+      if (stateData) {
+        Object.entries(stateData.counties).forEach(([countyKey, countyData]: [string, any]) => {
+          Object.entries(countyData.cities as Record<string, string[]>).forEach(([cityKey, zipCodes]) => {
+            // Add city path
+            childPaths.push([state, countyKey, cityKey])
+            // Add zip code paths
+            zipCodes.forEach(zipCode => {
+              childPaths.push([state, countyKey, cityKey, zipCode])
+            })
+          })
+        })
+      }
+    } else if (node.level === 1) {
+      // County level - get all cities and zip codes
+      const countyData = locationData.data[state]?.counties[county]
+      if (countyData) {
+        Object.entries(countyData.cities as Record<string, string[]>).forEach(([cityKey, zipCodes]) => {
+          // Add city path
+          childPaths.push([state, county, cityKey])
+          // Add zip code paths
+          zipCodes.forEach(zipCode => {
+            childPaths.push([state, county, cityKey, zipCode])
+          })
+        })
+      }
+    } else if (node.level === 2) {
+      // City level - get all zip codes
+      const zipCodes = locationData.data[state]?.counties[county]?.cities[city]
+      if (zipCodes) {
+        zipCodes.forEach((zipCode: string) => {
+          childPaths.push([state, county, city, zipCode])
+        })
+      }
+    }
+    
+    return childPaths
+  }, [locationData])
+
   // Get selection state for a node
   const getNodeSelectionState = useCallback((node: LocationNode): SelectionState => {
     const isSelected = isPathSelected(node.path)
@@ -48,28 +97,34 @@ export const useLocationSelection = (
         : [...selectedPaths.filter(path => !arraysEqual(path, node.path)), node.path]
       onLocationChange(newPaths)
     } else {
-      // Parent node - smart selection
+      // Parent node - smart selection including all children
       const shouldSelect = currentState !== 'selected'
       
       if (shouldSelect) {
-        // Select this level and remove any child selections
-        const newPaths = selectedPaths.filter(path => {
-          return !(path.length > node.path.length &&
-                  path.slice(0, node.path.length).every((part, i) => part === node.path[i]))
-        })
-        newPaths.push(node.path)
-        onLocationChange(newPaths)
+        // Select this node and all its children
+        const childPaths = getAllChildPaths(node)
+        const newPaths = [...selectedPaths]
+        
+        // Remove any existing child selections to avoid duplicates
+        const pathsToRemove = [...childPaths, node.path]
+        const filteredPaths = newPaths.filter(path => 
+          !pathsToRemove.some(removePath => arraysEqual(path, removePath))
+        )
+        
+        // Add the parent node and all children
+        filteredPaths.push(node.path, ...childPaths)
+        onLocationChange(filteredPaths)
       } else {
         // Deselect this node and all children
-        const newPaths = selectedPaths.filter(path => {
-          return !(arraysEqual(path, node.path) || 
-                  (path.length >= node.path.length &&
-                   path.slice(0, node.path.length).every((part, i) => part === node.path[i])))
-        })
+        const childPaths = getAllChildPaths(node)
+        const pathsToRemove = [...childPaths, node.path]
+        const newPaths = selectedPaths.filter(path => 
+          !pathsToRemove.some(removePath => arraysEqual(path, removePath))
+        )
         onLocationChange(newPaths)
       }
     }
-  }, [selectedPaths, onLocationChange, getNodeSelectionState])
+  }, [selectedPaths, onLocationChange, getNodeSelectionState, getAllChildPaths])
 
   // Select all states
   const selectAllStates = useCallback((allStates: LocationNode[]) => {
@@ -125,6 +180,7 @@ export const useLocationSelection = (
     arraysEqual,
     isPathSelected,
     hasSelectedChildren,
+    getAllChildPaths,
     getNodeSelectionState,
     toggleNodeSelection,
     selectAllStates,

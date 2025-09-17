@@ -45,7 +45,7 @@ export default function HierarchicalLocationDropdown({
     selectAllStates,
     clearAllSelections,
     executeBulkSelection
-  } = useLocationSelection(selectedPaths, onLocationChange, getAllPathsAtLevel)
+  } = useLocationSelection(selectedPaths, onLocationChange, getAllPathsAtLevel, locationData)
   
   // Get estimated counts for bulk operations
   const estimatedCounts = useMemo(() => getEstimatedCounts(), [getEstimatedCounts])
