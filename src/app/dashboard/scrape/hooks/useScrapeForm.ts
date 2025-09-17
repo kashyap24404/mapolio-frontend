@@ -31,6 +31,11 @@ export const useScrapeForm = () => {
     isSubmitting: false
   })
   
+  // Debug log
+  useEffect(() => {
+    console.log('useScrapeForm formState updated:', formState);
+  }, [formState]);
+  
   // Location data state
   const [locationState, setLocationState] = useState<LocationDataState>({
     locationData: null,
@@ -42,6 +47,7 @@ export const useScrapeForm = () => {
 
   // Form state update handlers
   const updateFormState = (updates: Partial<ScrapeFormState>) => {
+    console.log('updateFormState called with:', updates);
     setFormState(prev => ({ ...prev, ...updates }))
   }
 
@@ -118,7 +124,11 @@ export const useScrapeForm = () => {
   }
 
   const handleEstimate = async () => {
-    if (!formState.category) return
+    console.log('handleEstimate called, category:', formState.category);
+    if (!formState.category) {
+      console.log('handleEstimate cancelled - no category');
+      return;
+    }
     
     updateFormState({ isEstimating: true })
     

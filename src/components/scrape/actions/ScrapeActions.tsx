@@ -6,33 +6,52 @@ import { Button } from '@/components/ui/button'
 import { Calculator, Play, CreditCard, AlertCircle } from '@/lib/icons'
 import Link from 'next/link'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { DataType } from '@/components/scrape/types'
+import { useSupabase } from '@/lib/supabase/index'
+import { useIntegratedScrapeData } from '@/lib/hooks'
+import { ScrapeFormState } from '@/app/dashboard/scrape/types'
 
 interface ScrapeActionsProps {
-  estimatedResults: number
-  isEstimating: boolean
-  credits: { total: number } | null
+  formState: ScrapeFormState
   handleEstimate: () => void
   handleStartScraping: () => void
-  category: string
-  selectedDataTypes: string[] // Add this prop to get selected data types
-  dataTypes: DataType[] // Add dataTypes as a prop instead of using context
-  isSubmitting?: boolean
-  isLoading?: boolean // Global loading state from context
 }
 
 export default function ScrapeActions({
-  estimatedResults,
-  isEstimating,
-  credits,
+  formState,
   handleEstimate,
-  handleStartScraping,
-  category,
-  selectedDataTypes,
-  dataTypes,
-  isSubmitting = false,
-  isLoading = false
+  handleStartScraping
 }: ScrapeActionsProps) {
+  // Get auth data
+  const { credits, loading: authLoading } = useSupabase()
+  
+  // Get global scrape data
+  const {
+    dataTypes: rawDataTypes,
+    isLoading: scrapeDataLoading,
+  } = useIntegratedScrapeData()
+  
+  // Transform store types to component types
+  const dataTypes = rawDataTypes.map(dt => ({
+    id: dt.id,
+    label: dt.label,
+    credits_increase: dt.credits_increase || 0
+  }))
+  
+  const {
+    estimatedResults,
+    isEstimating,
+    selectedDataTypes,
+    isSubmitting,
+    category,
+  } = formState
+  
+  const isLoading = scrapeDataLoading || authLoading
+  
+  // Debug log
+  React.useEffect(() => {
+    console.log('ScrapeActions formState:', formState);
+  }, [formState]);
+  
   // Get data types with credit increases
   const dataTypesWithExtraCost = dataTypes
     .filter(dt => selectedDataTypes.includes(dt.id) && dt.credits_increase)

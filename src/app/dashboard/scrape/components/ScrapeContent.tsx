@@ -4,42 +4,33 @@ import React from 'react'
 import ScrapeForm from '@/components/scrape/ScrapeForm'
 import ScrapeActions from '@/components/scrape/actions/ScrapeActions'
 import { ContentLoadingState } from './LoadingStates'
-import { ScrapeFormState, LocationDataState } from '../types'
-import { Category, Country, DataType, Rating } from '@/components/scrape/types'
+import { useSupabase } from '@/lib/supabase/index'
+import { useIntegratedScrapeData } from '@/lib/hooks'
+import { useScrapeForm } from '../hooks/useScrapeForm'
 
-interface ScrapeContentProps {
-  formState: ScrapeFormState
-  locationState: LocationDataState
-  locationError?: string | null
-  categories: Category[]
-  countries: Country[]
-  dataTypes: DataType[]
-  ratings: Rating[]
-  credits: any
-  isLoading: boolean
-  updateFormState: (updates: Partial<ScrapeFormState>) => void
-  handleDataTypeChange: (dataTypeId: string, checked: boolean) => void
-  handleBulkDataTypeSelection: (dataTypeIds: string[]) => void
-  handleEstimate: () => Promise<void>
-  handleStartScraping: () => Promise<void>
-}
+export const ScrapeContent: React.FC = () => {
+  // Get auth data
+  const { loading: authLoading } = useSupabase()
+  
+  // Get global scrape data
+  const {
+    isLoading: scrapeDataLoading,
+  } = useIntegratedScrapeData()
+  
+  // Get form state and handlers from custom hook
+  const {
+    formState,
+    locationState,
+    locationError,
+    updateFormState,
+    handleDataTypeChange,
+    handleBulkDataTypeSelection,
+    handleEstimate,
+    handleStartScraping
+  } = useScrapeForm()
 
-export const ScrapeContent: React.FC<ScrapeContentProps> = ({
-  formState,
-  locationState,
-  locationError,
-  categories,
-  countries,
-  dataTypes,
-  ratings,
-  credits,
-  isLoading,
-  updateFormState,
-  handleDataTypeChange,
-  handleBulkDataTypeSelection,
-  handleEstimate,
-  handleStartScraping
-}) => {
+  const isLoading = scrapeDataLoading || authLoading
+
   return (
     <div className="p-6">
       <div className="max-w-4xl mx-auto">
@@ -51,33 +42,12 @@ export const ScrapeContent: React.FC<ScrapeContentProps> = ({
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
             <ScrapeForm
-              category={formState.category}
-              setCategory={(category) => updateFormState({ category })}
-              isManualCategory={formState.isManualCategory}
-              setIsManualCategory={(isManualCategory) => updateFormState({ isManualCategory })}
-              location={formState.location}
-              setLocation={(location) => updateFormState({ location })}
-              country={formState.country}
-              setCountry={(country) => updateFormState({ country })}
-              selectedLocationPaths={formState.selectedLocationPaths}
-              setSelectedLocationPaths={(paths) => updateFormState({ selectedLocationPaths: paths })}
-              selectedDataTypes={formState.selectedDataTypes}
+              formState={formState}
+              locationState={locationState}
+              locationError={locationError}
+              updateFormState={updateFormState}
               handleDataTypeChange={handleDataTypeChange}
               handleBulkDataTypeSelection={handleBulkDataTypeSelection}
-              selectedRating={formState.selectedRating}
-              setSelectedRating={(rating) => updateFormState({ selectedRating: rating })}
-              extractSingleImage={formState.extractSingleImage}
-              setExtractSingleImage={(value) => updateFormState({ extractSingleImage: value })}
-              maxReviews={formState.maxReviews}
-              setMaxReviews={(value) => updateFormState({ maxReviews: value })}
-              categories={categories}
-              countries={countries}
-              dataTypes={dataTypes}
-              ratings={ratings}
-              locationData={locationState.locationData}
-              loadingLocationData={locationState.loadingLocationData}
-              locationError={locationError}
-              isLoading={isLoading} // Pass loading state to form
             />
           </div>
 
@@ -85,16 +55,9 @@ export const ScrapeContent: React.FC<ScrapeContentProps> = ({
           <div className="space-y-6">
             {/* Actions */}
             <ScrapeActions
-              estimatedResults={formState.estimatedResults}
-              isEstimating={formState.isEstimating}
-              credits={credits}
+              formState={formState}
               handleEstimate={handleEstimate}
               handleStartScraping={handleStartScraping}
-              category={formState.category}
-              selectedDataTypes={formState.selectedDataTypes} // Add selectedDataTypes prop
-              dataTypes={dataTypes} // Pass dataTypes prop
-              isSubmitting={formState.isSubmitting}
-              isLoading={isLoading} // Pass loading state to actions
             />
           </div>
         </div>

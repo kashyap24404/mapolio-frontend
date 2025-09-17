@@ -8,73 +8,77 @@ import LocationSection from './sections/LocationSection'
 import DataFieldsSection from './sections/DataFieldsSection'
 import AdvancedExtractionSection from './sections/AdvancedExtractionSection'
 import RatingsSection from './sections/RatingsSection'
-import { Category, Country, DataType, Rating, LocationData } from './types'
 import { ComponentErrorBoundary } from '@/components/error-boundaries'
+import { useIntegratedScrapeData } from '@/lib/hooks'
+import { ScrapeFormState, LocationDataState } from '@/app/dashboard/scrape/types'
 
 interface ScrapeFormProps {
   // Form state
-  category: string
-  setCategory: (value: string) => void
-  isManualCategory: boolean
-  setIsManualCategory: (value: boolean) => void
-  location: string
-  setLocation: (value: string) => void
-  country: string
-  setCountry: (value: string) => void
-  selectedLocationPaths: string[][]
-  setSelectedLocationPaths: (paths: string[][]) => void
-  selectedDataTypes: string[]
+  formState: ScrapeFormState
+  locationState: LocationDataState
+  locationError?: string | null
+  updateFormState: (updates: Partial<ScrapeFormState>) => void
   handleDataTypeChange: (dataTypeId: string, checked: boolean) => void
   handleBulkDataTypeSelection?: (dataTypeIds: string[]) => void
-  selectedRating: string
-  setSelectedRating: (value: string) => void
-  extractSingleImage: boolean
-  setExtractSingleImage: (value: boolean) => void
-  maxReviews: number
-  setMaxReviews: (value: number) => void
-  
-  // Data
-  categories: Category[]
-  countries: Country[]
-  dataTypes: DataType[]
-  ratings: Rating[]
-  locationData: LocationData | null
-  
-  // Loading states
-  loadingLocationData: boolean
-  locationError?: string | null
-  isLoading?: boolean // Global loading state from context
 }
 
 export default function ScrapeForm({
-  category,
-  setCategory,
-  isManualCategory,
-  setIsManualCategory,
-  location,
-  setLocation,
-  country,
-  setCountry,
-  selectedLocationPaths,
-  setSelectedLocationPaths,
-  selectedDataTypes,
+  formState,
+  locationState,
+  locationError,
+  updateFormState,
   handleDataTypeChange,
   handleBulkDataTypeSelection,
-  selectedRating,
-  setSelectedRating,
-  extractSingleImage,
-  setExtractSingleImage,
-  maxReviews,
-  setMaxReviews,
-  categories,
-  countries,
-  dataTypes,
-  ratings,
-  locationData,
-  loadingLocationData,
-  locationError,
-  isLoading = false
 }: ScrapeFormProps) {
+  // Get global scrape data
+  const {
+    categories: rawCategories,
+    countries: rawCountries,
+    dataTypes: rawDataTypes,
+    ratings: rawRatings,
+    isLoading: scrapeDataLoading,
+  } = useIntegratedScrapeData()
+  
+  // Transform store types to component types
+  const categories = rawCategories.map(cat => ({
+    id: cat.id,
+    value: cat.value,
+    label: cat.label
+  }))
+  
+  const countries = rawCountries
+  
+  const dataTypes = rawDataTypes.map(dt => ({
+    id: dt.id,
+    label: dt.label,
+    credits_increase: dt.credits_increase || 0
+  }))
+  
+  const ratings = rawRatings.map(rating => ({
+    id: rating.id,
+    value: rating.value,
+    label: rating.label
+  }))
+  
+  const {
+    category,
+    isManualCategory,
+    location,
+    country,
+    selectedLocationPaths,
+    selectedDataTypes,
+    selectedRating,
+    extractSingleImage,
+    maxReviews,
+  } = formState
+  
+  const isLoading = scrapeDataLoading
+  
+  // Debug log
+  React.useEffect(() => {
+    console.log('ScrapeForm formState:', formState);
+  }, [formState]);
+
   return (
     <Card>
       <CardHeader>
@@ -90,9 +94,9 @@ export default function ScrapeForm({
         >
           <BusinessCategorySection
             category={category}
-            setCategory={setCategory}
+            setCategory={(value) => updateFormState({ category: value })}
             isManualCategory={isManualCategory}
-            setIsManualCategory={setIsManualCategory}
+            setIsManualCategory={(value) => updateFormState({ isManualCategory: value })}
             categories={categories}
             disabled={isLoading} // Disable when global data is loading
           />
@@ -104,15 +108,15 @@ export default function ScrapeForm({
         >
           <LocationSection
             location={location}
-            setLocation={setLocation}
+            setLocation={(value) => updateFormState({ location: value })}
             country={country}
-            setCountry={setCountry}
+            setCountry={(value) => updateFormState({ country: value })}
             selectedLocationPaths={selectedLocationPaths}
-            setSelectedLocationPaths={setSelectedLocationPaths}
+            setSelectedLocationPaths={(paths) => updateFormState({ selectedLocationPaths: paths })}
             countries={countries}
             disabled={isLoading} // Disable when global data is loading
-            locationData={locationData}
-            loadingLocationData={loadingLocationData}
+            locationData={locationState.locationData}
+            loadingLocationData={locationState.loadingLocationData}
             locationError={locationError}
           />
         </ComponentErrorBoundary>
@@ -136,9 +140,9 @@ export default function ScrapeForm({
         >
           <AdvancedExtractionSection
             extractSingleImage={extractSingleImage}
-            setExtractSingleImage={setExtractSingleImage}
+            setExtractSingleImage={(value) => updateFormState({ extractSingleImage: value })}
             maxReviews={maxReviews}
-            setMaxReviews={setMaxReviews}
+            setMaxReviews={(value) => updateFormState({ maxReviews: value })}
             selectedDataTypes={selectedDataTypes}
             disabled={isLoading} // Disable when global data is loading
           />
@@ -150,7 +154,7 @@ export default function ScrapeForm({
         >
           <RatingsSection
             selectedRating={selectedRating}
-            setSelectedRating={setSelectedRating}
+            setSelectedRating={(value) => updateFormState({ selectedRating: value })}
             ratings={ratings}
             disabled={isLoading} // Disable when global data is loading
           />
