@@ -191,10 +191,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Handle tab visibility changes to refresh session when user returns to tab
-  useEffect(() => {
-    return setupVisibilityHandler(user, stableSetUser, stableSetProfile, stableSetCredits)
-  }, [user])
+  // Removed the visibility handler effect since we're now using SWR's built-in revalidation
+  // This prevents the "thundering herd" problem on tab focus
 
   return (
     <SupabaseContext.Provider value={contextValue}>

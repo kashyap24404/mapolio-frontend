@@ -19,8 +19,11 @@ export const swrConfig: SWRConfiguration = {
   errorRetryCount: 3,
   errorRetryInterval: 2000, // 2 seconds between retries
   
-  // Focus revalidation throttling
+  // Focus revalidation throttling - critical for preventing thundering herd
   focusThrottleInterval: 5000, // Throttle focus revalidation to every 5 seconds
+  
+  // Add revalidation throttling for better performance
+  revalidateIfStale: true,
   
   // Remove the custom fetcher - let individual hooks handle fetching
   // fetcher: async (key: string) => { ... },

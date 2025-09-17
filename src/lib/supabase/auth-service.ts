@@ -5,14 +5,8 @@ import { withTimeoutAndRetry } from '@/lib/services/base-service'
 import { User } from '@supabase/supabase-js'
 import { Profile, UserCredits } from './types'
 
-// Debounce utility for visibility changes
-let visibilityDebounceTimer: NodeJS.Timeout | null = null;
-let lastVisibilityCheck = 0;
-let isVisibilityHandlerActive = false; // Flag to prevent multiple handlers
-const VISIBILITY_DEBOUNCE_MS = 5000; // Increased to 5 seconds for better stability
-const MIN_CHECK_INTERVAL = 120000; // Increased to 2 minutes minimum between session checks
-
-// Handle tab visibility changes to refresh session when user returns to tab
+// This function is now a no-op as we're using SWR's built-in revalidation
+// The previous visibility handler was causing the "thundering herd" problem
 export const setupVisibilityHandler = (
   user: User | null, 
   setUser: (user: User | null) => void, 
@@ -20,6 +14,7 @@ export const setupVisibilityHandler = (
   setCredits: (credits: UserCredits | null) => void
 ) => {
   // This function is now a no-op as we're using SWR's built-in revalidation
+  // The previous visibility handler was causing the "thundering herd" problem
   console.log('Custom visibility handler is disabled - using SWR revalidation instead');
   return () => {};
 }

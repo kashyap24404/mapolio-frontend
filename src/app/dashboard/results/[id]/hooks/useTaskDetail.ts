@@ -62,12 +62,16 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // When the taskId changes or tasks are updated, get the task from the global context or specific fetch
+  // When the taskId changes or tasks are updated, get the task from the specific fetch or global context
   useEffect(() => {
-    if (!taskId) {
-      setTask(null)
-      setLoading(false)
-      return
+    // Add a guard clause: Do not proceed if the user object is not available or taskId is missing
+    if (!user || !taskId) {
+      setTask(null);
+      setLoading(false);
+      if (!user) {
+        setError('User not authenticated');
+      }
+      return;
     }
     
     // If both context and specific task are still loading, wait
@@ -76,11 +80,11 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
       return
     }
     
-    // First try to get the task from the global context (faster)
-    let foundTask = getTaskById(taskId)
+    // PRIORITIZE the specifically fetched task from SWR, as it's the most up-to-date
+    // data source after a manual refresh via `mutateTask`.
+    let foundTask = null;
     
-    // If not found in context, use the specifically fetched task
-    if (!foundTask && specificTask) {
+    if (specificTask) {
       // Convert ScrapingTask to Task format for compatibility
       foundTask = {
         id: specificTask.id,
@@ -97,6 +101,12 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
         config: specificTask.config,
         result_json_url: specificTask.result_json_url,
         result_csv_url: specificTask.result_csv_url,
+      };
+    } else {
+      // FALLBACK to the global context only if the specific task isn't available.
+      const taskFromContext = getTaskById(taskId);
+      if (taskFromContext) {
+        foundTask = taskFromContext;
       }
     }
     
@@ -110,7 +120,7 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
     }
     
     setLoading(tasksLoading || specificTaskLoading)
-  }, [taskId, tasks, tasksLoading, getTaskById, specificTask, specificTaskLoading, specificTaskError])
+  }, [taskId, user, tasks, tasksLoading, getTaskById, specificTask, specificTaskLoading, specificTaskError])
 
   // Pass through any error from the tasks context
   useEffect(() => {
@@ -122,8 +132,12 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
   // Create refresh handler that fetches fresh data and updates global cache
   const refreshHandler = useCallback(async () => {
     console.log('Refresh handler called with:', { taskId, userId: user?.id });
-    if (!taskId) {
-      console.log('No taskId provided, returning early');
+    // Add a guard clause: Do not proceed if the user object is not available or taskId is missing
+    if (!user || !taskId) {
+      console.log('No user or taskId provided, returning early');
+      if (!user) {
+        setError('User not authenticated');
+      }
       return;
     }
     
