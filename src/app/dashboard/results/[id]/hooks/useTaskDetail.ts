@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTasksData } from '@/contexts/TasksDataContext'
 import { useTask } from '@/lib/swr/hooks/use-tasks'
+import { TasksService } from '@/lib/data-services'
 import { Task } from '../types'
 
 // Define the user type
@@ -28,6 +29,9 @@ interface ScrapingTask {
   result_csv_url?: string;
 }
 
+// Create a global instance of the TasksService
+const tasksService = TasksService.getInstance();
+
 export function useTaskDetail(user: User | null, taskId: string | null) {
   let tasks: Task[] = [];
   let tasksLoading = true;
@@ -46,11 +50,12 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
     console.log('TasksDataProvider not ready yet, using defaults');
   }
   
-  // Fetch specific task if taskId is provided (with user context for security)
-  const { 
-    data: specificTask, 
-    error: specificTaskError, 
-    isLoading: specificTaskLoading 
+  // Fetch specific task if taskId is provided (with user context for security and consistent cache keys)
+  const {
+    data: specificTask,
+    error: specificTaskError,
+    isLoading: specificTaskLoading,
+    mutate: mutateTask
   } = useTask(taskId || undefined, user?.id);
   
   const [task, setTask] = useState<Task | null>(null)
@@ -114,9 +119,82 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
     }
   }, [tasksError, specificTaskError])
 
+  // Create refresh handler that fetches fresh data and updates global cache
+  const refreshHandler = useCallback(async () => {
+    console.log('Refresh handler called with:', { taskId, userId: user?.id });
+    if (!taskId) {
+      console.log('No taskId provided, returning early');
+      return;
+    }
+    
+    try {
+      console.log('Setting loading to true');
+      setLoading(true);
+      
+      // Fetch fresh data directly from the service
+      let result;
+      if (user?.id) {
+        console.log('Fetching task with userId:', user.id);
+        result = await tasksService.fetchTaskById(taskId, user.id);
+      } else {
+        console.log('Fetching task without userId');
+        result = await tasksService.fetchTaskById(taskId);
+      }
+      
+      console.log('Fetch result:', result);
+      
+      if (result.error) {
+        console.log('Error in fetch result:', result.error);
+        setError(result.error);
+      } else if (result.data) {
+        console.log('Data in fetch result:', result.data);
+        // Convert ScrapingTask to Task format for compatibility
+        const refreshedTask = {
+          id: result.data.id,
+          status: result.data.status as 'running' | 'completed' | 'failed',
+          progress: result.data.progress,
+          message: result.data.error_message,
+          created_at: result.data.created_at,
+          completed_at: result.data.updated_at,
+          search_query: result.data.category,
+          location: result.data.country,
+          total_results: result.data.total_records,
+          credits_used: result.data.processed_records,
+          error_message: result.data.error_message,
+          config: result.data.config,
+          result_json_url: result.data.result_json_url,
+          result_csv_url: result.data.result_csv_url,
+        };
+        
+        console.log('Setting refreshed task:', refreshedTask);
+        setTask(refreshedTask);
+        
+        // Update the specific task SWR cache
+        if (mutateTask) {
+          console.log('Mutating specific task SWR cache with fresh data');
+          await mutateTask(result.data, { revalidate: false });
+        }
+        
+        // Also invalidate the global tasks cache to ensure consistency
+        console.log('Invalidating global tasks cache');
+        await tasksService.invalidateCache();
+      } else {
+        console.log('No data in result');
+        setError('No data received from server');
+      }
+    } catch (err: any) {
+      console.error('Error refreshing task:', err);
+      setError('Failed to refresh task data: ' + (err.message || 'Unknown error'));
+    } finally {
+      console.log('Setting loading to false');
+      setLoading(false);
+    }
+  }, [taskId, user?.id, mutateTask]);
+
   return {
     task,
     loading: loading || tasksLoading || specificTaskLoading,
-    error
+    error,
+    refresh: refreshHandler
   }
 }

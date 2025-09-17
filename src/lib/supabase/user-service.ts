@@ -31,7 +31,7 @@ export const loadUserProfile = async (userId: string, setProfile: Function, setC
             return await supabase.auth.getUser();
           },
           60000, // 60 second timeout
-          3, // 3 retries
+          2, // Reduced retries to 2
           'get-user-data'
         );
         if (userData.user) {
@@ -51,13 +51,15 @@ export const loadUserProfile = async (userId: string, setProfile: Function, setC
         }
       } catch (authError) {
         console.error('Error getting user data for profile creation:', authError);
+        // Don't fail completely on network errors - user can still be authenticated
+        // Profile will be loaded when network connectivity is restored
       }
     }
   } catch (error) {
     console.error('Unexpected error loading user profile:', error);
     // Check if this is a network timeout error
     if ((error as Error)?.message?.includes('timeout')) {
-      console.warn('Network timeout occurred while loading user profile. This may be due to poor network connectivity.');
+      console.warn('Network timeout occurred while loading user profile. This may be due to poor network connectivity or tab throttling.');
       // We don't want to completely fail the authentication flow due to a profile loading issue
       // The user can still be authenticated even if we can't load their profile immediately
       // Profile will be loaded when network connectivity is restored

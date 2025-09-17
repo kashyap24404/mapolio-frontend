@@ -19,84 +19,9 @@ export const setupVisibilityHandler = (
   setProfile: (profile: Profile | null) => void, 
   setCredits: (credits: UserCredits | null) => void
 ) => {
-  // Prevent multiple handlers from being set up
-  if (isVisibilityHandlerActive) {
-    return () => {};
-  }
-  
-  isVisibilityHandlerActive = true;
-  
-  const handleVisibilityChange = async () => {
-    // Only process when becoming visible, user exists, and we're not in the middle of processing
-    if (document.visibilityState !== 'visible' || !user) {
-      return;
-    }
-
-    // Clear any existing timer
-    if (visibilityDebounceTimer) {
-      clearTimeout(visibilityDebounceTimer);
-    }
-
-    // Debounce rapid visibility changes
-    visibilityDebounceTimer = setTimeout(async () => {
-      const now = Date.now();
-      
-      // Don't check session too frequently
-      if (now - lastVisibilityCheck < MIN_CHECK_INTERVAL) {
-        return;
-      }
-
-      lastVisibilityCheck = now;
-      
-      try {
-        const { data: { session } } = await withTimeoutAndRetry(
-          async () => {
-            return await supabase.auth.getSession();
-          },
-          30000, // Reduced timeout to 30 seconds
-          2, // Reduced retries to 2
-          'check-session'
-        );
-        
-        // Only refresh if session is actually expired (with 5 minute buffer)
-        if (!session || (session.expires_at && new Date(session.expires_at * 1000) < new Date(Date.now() + 5 * 60 * 1000))) {
-          const { data: { session: refreshedSession }, error } = await withTimeoutAndRetry(
-            async () => {
-              return await supabase.auth.refreshSession();
-            },
-            30000, // Reduced timeout to 30 seconds
-            2, // Reduced retries to 2
-            'refresh-session'
-          );
-          
-          if (error) {
-            // Don't force sign out on network errors - just log and continue
-            console.warn('Session refresh failed (network error), continuing with existing session:', error);
-          } else if (refreshedSession?.user) {
-            // Only update user if it's different to prevent unnecessary re-renders
-            if (refreshedSession.user.id !== user.id) {
-              setUser(refreshedSession.user);
-            }
-            // Profile and credits reload will be handled by the auth state change listener
-          }
-        }
-      } catch (error) {
-        // Don't force sign out on network errors - just log and continue
-        console.warn('Visibility check failed (network error), continuing with existing session:', error);
-      }
-    }, VISIBILITY_DEBOUNCE_MS);
-  };
-
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-  
-  return () => {
-    isVisibilityHandlerActive = false;
-    if (visibilityDebounceTimer) {
-      clearTimeout(visibilityDebounceTimer);
-      visibilityDebounceTimer = null;
-    }
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
-  };
+  // This function is now a no-op as we're using SWR's built-in revalidation
+  console.log('Custom visibility handler is disabled - using SWR revalidation instead');
+  return () => {};
 }
 
 export const signIn = async (

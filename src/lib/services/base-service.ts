@@ -10,16 +10,16 @@ interface RequestState {
 }
 
 const requestStates = new Map<string, RequestState>();
-const CIRCUIT_BREAKER_THRESHOLD = 3; // Number of failures before opening circuit
-const CIRCUIT_BREAKER_TIMEOUT = 60000; // 60 seconds circuit breaker timeout
+const CIRCUIT_BREAKER_THRESHOLD = 5; // Increased threshold to 5 failures before opening circuit
+const CIRCUIT_BREAKER_TIMEOUT = 120000; // Increased to 2 minutes circuit breaker timeout
 const REQUEST_THROTTLE_MS = 1000; // 1 second request throttling
 const REQUEST_DEDUPLICATION_MS = 5000; // 5 seconds for request deduplication
 
-// Enhanced timeout wrapper with circuit breaker and intelligent retry
+// Enhanced timeout wrapper with more lenient circuit breaker and intelligent retry
 export const withTimeoutAndRetry = async <T>(
   fn: () => Promise<T>, 
-  timeoutMs: number = 30000, // Increased default to 30 seconds
-  retries: number = 2, // Reduced default to 2 retries
+  timeoutMs: number = 60000, // Increased default to 60 seconds to handle tab throttling
+  retries: number = 3, // Increased default to 3 retries
   requestKey?: string
 ): Promise<T> => {
   const key = requestKey || 'default';
@@ -31,7 +31,7 @@ export const withTimeoutAndRetry = async <T>(
     pendingRequests: new Set<string>()
   };
 
-  // Check circuit breaker
+  // Check circuit breaker - be more lenient with timeouts that might be due to tab throttling
   if (state.isCircuitOpen) {
     const now = Date.now();
     if (now - state.circuitOpenTime < CIRCUIT_BREAKER_TIMEOUT) {
@@ -125,7 +125,9 @@ export const withTimeoutAndRetry = async <T>(
       state.consecutiveFailures++;
       
       // Open circuit breaker if too many failures
-      if (state.consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD) {
+      // But be more lenient with timeout errors that might be due to tab throttling
+      if (state.consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD && 
+          !(errorMessage.includes('timeout') && state.consecutiveFailures < CIRCUIT_BREAKER_THRESHOLD + 2)) {
         state.isCircuitOpen = true;
         state.circuitOpenTime = Date.now();
         console.warn(`Circuit breaker opened for ${key} due to ${state.consecutiveFailures} consecutive failures`);

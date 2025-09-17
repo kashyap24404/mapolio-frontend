@@ -22,7 +22,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   const [taskId, setTaskId] = useState<string | null>(null)
   
   // Use the refactored useTaskDetail hook that now uses the global context
-  const { task, loading, error } = useTaskDetail(user, taskId)
+  const { task, loading, error, refresh } = useTaskDetail(user, taskId)
   
   // Get the refresh function from the integrated tasks hook
   const { refresh: refreshTasks } = useIntegratedTasksData(user?.id || null)
@@ -94,7 +94,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                   <TaskDetailContent 
                     task={task}
                     loading={loading}
-                    onRefresh={refreshTasks}
+                    onRefresh={refresh} // Revert to using the original refresh function
                     onBack={() => router.push('/dashboard/results')}
                     onDownload={handleDownload}
                   />
