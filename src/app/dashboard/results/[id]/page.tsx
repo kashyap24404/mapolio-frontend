@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/site/Navbar'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
 import { useSupabase } from '@/lib/supabase/index'
+import { StorageService } from '@/lib/supabase/storage-service'
 import { 
   LoadingState,
   ErrorState,
@@ -37,20 +38,19 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     unwrapParams()
   }, [params])
 
-  const handleDownload = (url: string, filename: string) => {
-    if (!url) {
+  const handleDownload = async (filePath: string, filename: string) => {
+    if (!filePath) {
       alert('Download URL not available')
       return
     }
     
-    // Create a temporary link and trigger download
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    link.target = '_blank'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    try {
+      const bucketName = process.env.NEXT_PUBLIC_SUPABASE_BUCKET_NAME || 'user-tasks-store'
+      await StorageService.downloadFile(bucketName, filePath, filename)
+    } catch (error) {
+      console.error('Error downloading file:', error)
+      alert('Failed to download file. Please try again.')
+    }
   }
 
   // Check authentication after loading completes

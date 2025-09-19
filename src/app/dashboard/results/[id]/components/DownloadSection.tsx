@@ -7,21 +7,21 @@ import { Task } from '../../[id]/types'
 
 interface DownloadSectionProps {
   task: Task
-  onDownload: (url: string, filename: string) => void
+  onDownload: (filePath: string, filename: string) => void
 }
 
 export function DownloadSection({ task, onDownload }: DownloadSectionProps) {
   const [isDownloading, setIsDownloading] = useState(false)
   
-  const handleDownload = (url: string | undefined, format: string) => {
-    if (!url || !onDownload) {
+  const handleDownload = (filePath: string | undefined, format: string) => {
+    if (!filePath || !onDownload) {
       alert(`${format} download URL not available yet. Please try again later.`)
       return
     }
     
     setIsDownloading(true)
     try {
-      onDownload(url, `${task.config?.search_query || 'results'}-${task.id}.${format.toLowerCase()}`)
+      onDownload(filePath, `${task.config?.search_query || 'results'}-${task.id}.${format.toLowerCase()}`)
     } finally {
       // Add a small delay to show the loading state
       setTimeout(() => setIsDownloading(false), 800)
