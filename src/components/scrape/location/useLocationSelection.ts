@@ -36,14 +36,12 @@ export const useLocationSelection = (
     const childPaths: string[][] = []
     
     if (node.level === 0) {
-      // State level - get all counties, cities, and zip codes
+      // State level - get all zip codes (deepest level only)
       const stateData = locationData.data[state]
       if (stateData) {
         Object.entries(stateData.counties).forEach(([countyKey, countyData]: [string, any]) => {
           Object.entries(countyData.cities as Record<string, string[]>).forEach(([cityKey, zipCodes]) => {
-            // Add city path
-            childPaths.push([state, countyKey, cityKey])
-            // Add zip code paths
+            // Only add zip code paths (deepest level)
             zipCodes.forEach(zipCode => {
               childPaths.push([state, countyKey, cityKey, zipCode])
             })
@@ -51,13 +49,11 @@ export const useLocationSelection = (
         })
       }
     } else if (node.level === 1) {
-      // County level - get all cities and zip codes
+      // County level - get all zip codes (deepest level only)
       const countyData = locationData.data[state]?.counties[county]
       if (countyData) {
         Object.entries(countyData.cities as Record<string, string[]>).forEach(([cityKey, zipCodes]) => {
-          // Add city path
-          childPaths.push([state, county, cityKey])
-          // Add zip code paths
+          // Only add zip code paths (deepest level)
           zipCodes.forEach(zipCode => {
             childPaths.push([state, county, cityKey, zipCode])
           })
@@ -101,24 +97,23 @@ export const useLocationSelection = (
       const shouldSelect = currentState !== 'selected'
       
       if (shouldSelect) {
-        // Select this node and all its children
+        // Select all children (zip codes only) - don't include parent node
         const childPaths = getAllChildPaths(node)
         const newPaths = [...selectedPaths]
         
         // Remove any existing child selections to avoid duplicates
-        const pathsToRemove = [...childPaths, node.path]
-        const filteredPaths = newPaths.filter(path => 
-          !pathsToRemove.some(removePath => arraysEqual(path, removePath))
+        const filteredPaths = newPaths.filter(path =>
+          !childPaths.some(childPath => arraysEqual(path, childPath))
         )
         
-        // Add the parent node and all children
-        filteredPaths.push(node.path, ...childPaths)
+        // Add only the child paths (zip codes)
+        filteredPaths.push(...childPaths)
         onLocationChange(filteredPaths)
       } else {
         // Deselect this node and all children
         const childPaths = getAllChildPaths(node)
         const pathsToRemove = [...childPaths, node.path]
-        const newPaths = selectedPaths.filter(path => 
+        const newPaths = selectedPaths.filter(path =>
           !pathsToRemove.some(removePath => arraysEqual(path, removePath))
         )
         onLocationChange(newPaths)

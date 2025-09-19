@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { SupabaseContext } from './context'
-import { loadUserProfile } from './user-service'
+import { loadUserProfile, clearProfileCache } from './user-service'
 import { loadUserCredits } from './credit-service'
 import { loadPricingPlan } from './pricing-service'
 import { setupVisibilityHandler, signIn, signUp, signOut } from './auth-service'
@@ -126,18 +126,23 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           stableSetUser(session.user)
-          // Load profile and credits with error handling
-          try {
-            await loadUserProfile(session.user.id, stableSetProfile, stableSetCredits)
-          } catch (profileError) {
-            console.error('Error loading user profile after session init:', profileError)
-            // Continue with session even if profile loading fails
+          // Only load profile if not already loaded for this user
+          if (!profile || profile.id !== session.user.id) {
+            // Load profile and credits with error handling
+            try {
+              await loadUserProfile(session.user.id, stableSetProfile, stableSetCredits)
+            } catch (profileError) {
+              console.error('Error loading user profile after session init:', profileError)
+              // Continue with session even if profile loading fails
+            }
           }
         } else {
           // No session, ensure state is clean
           stableSetUser(null)
           stableSetProfile(null)
           stableSetCredits(null)
+          // Clear profile cache on sign out
+          clearProfileCache()
         }
         
         // Load pricing plan regardless of user authentication
@@ -167,16 +172,21 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           stableSetUser(session.user)
-          try {
-            await loadUserProfile(session.user.id, stableSetProfile, stableSetCredits)
-          } catch (profileError) {
-            console.error('Error loading user profile after auth change:', profileError)
-            // Continue with session even if profile loading fails
+          // Only load profile if not already loaded for this user
+          if (!profile || profile.id !== session.user.id) {
+            try {
+              await loadUserProfile(session.user.id, stableSetProfile, stableSetCredits)
+            } catch (profileError) {
+              console.error('Error loading user profile after auth change:', profileError)
+              // Continue with session even if profile loading fails
+            }
           }
         } else {
           stableSetUser(null)
           stableSetProfile(null)
           stableSetCredits(null)
+          // Clear profile cache on sign out
+          clearProfileCache()
         }
         
         if (isMounted) {

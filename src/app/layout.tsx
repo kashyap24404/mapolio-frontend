@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { SupabaseProvider } from "@/lib/supabase/index";
+import { QueryProvider } from "@/lib/tanstack-query/provider";
 import React from "react";
 
 const inter = Inter({ 
@@ -30,7 +31,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SupabaseProvider>
-            {children}
+            <QueryProvider>
+              {children}
+            </QueryProvider>
           </SupabaseProvider>
         </ThemeProvider>
       </body>

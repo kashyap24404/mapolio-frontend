@@ -2,8 +2,8 @@
 
 import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useUserStore } from '@/stores/user-store';
-import { useUserStats as useUserStatsSWR, useTransactions as useTransactionsSWR, usePurchaseHistory as usePurchaseHistorySWR } from '@/lib/swr/hooks/use-user';
-import { useTasks as useTasksSWR } from '@/lib/swr/hooks/use-tasks';
+import { useUserStats, useTransactions, usePurchaseHistory } from '@/lib/tanstack-query/hooks/use-user';
+import { useTasks } from '@/lib/tanstack-query/hooks/use-tasks';
 import type { ScrapingTask } from '@/stores/tasks-store';
 import type { PurchaseHistory } from '@/stores/user-store';
 
@@ -68,29 +68,38 @@ export function UserStatsProvider({ children, userId }: UserStatsProviderProps) 
     data: userStats, 
     error: statsError, 
     isLoading: statsLoading,
-    mutate: refreshStats 
-  } = useUserStatsSWR(userId);
+    refetch: refreshStatsQuery 
+  } = useUserStats(userId);
   
   const { 
     data: transactions, 
     error: transactionsError, 
     isLoading: transactionsLoading,
-    mutate: refreshTransactions 
-  } = useTransactionsSWR(userId, 50);
+    refetch: refreshTransactionsQuery 
+  } = useTransactions(userId);
   
   const { 
     data: purchaseHistory, 
     error: purchaseHistoryError, 
     isLoading: purchaseHistoryLoading,
-    mutate: refreshPurchaseHistory 
-  } = usePurchaseHistorySWR(userId, 20);
+    refetch: refreshPurchaseHistoryQuery 
+  } = usePurchaseHistory(userId);
   
   const { 
     data: tasksData, 
     error: tasksError, 
     isLoading: tasksLoading,
-    mutate: refreshTasks 
-  } = useTasksSWR(userId);
+    refetch: refreshTasksQuery 
+  } = useTasks(userId);
+  
+  const refreshStats = async () => {
+    await Promise.all([
+      refreshStatsQuery(),
+      refreshTransactionsQuery(),
+      refreshPurchaseHistoryQuery(),
+      refreshTasksQuery()
+    ]);
+  };
 
   // Use useMemo to prevent unnecessary re-renders
   const taskStatsValue = useMemo(() => {
@@ -112,10 +121,10 @@ export function UserStatsProvider({ children, userId }: UserStatsProviderProps) 
     }, 0) || 0;
     
     return {
-      searches: userStats.totalTasks,
+      searches: userStats?.totalTasks || 0,
       results: results,
-      creditsUsed: userStats.usedCredits,
-      pendingTasks: userStats.totalTasks - userStats.completedTasks - userStats.failedTasks,
+      creditsUsed: userStats?.usedCredits || 0,
+      pendingTasks: (userStats?.totalTasks || 0) - (userStats?.completedTasks || 0) - (userStats?.failedTasks || 0),
       totalResults: totalResults
     };
   }, [userStats, tasksData?.tasks]);
@@ -167,13 +176,13 @@ export function UserStatsProvider({ children, userId }: UserStatsProviderProps) 
   const refreshStatsFn = useMemo(() => {
     return async () => {
       await Promise.all([
-        refreshStats(),
-        refreshTransactions(),
-        refreshPurchaseHistory(),
-        refreshTasks()
+        refreshStatsQuery(),
+        refreshTransactionsQuery(),
+        refreshPurchaseHistoryQuery(),
+        refreshTasksQuery()
       ]);
     };
-  }, [refreshStats, refreshTransactions, refreshPurchaseHistory, refreshTasks]);
+  }, [refreshStatsQuery, refreshTransactionsQuery, refreshPurchaseHistoryQuery, refreshTasksQuery]);
 
   const getTaskById = useMemo(() => {
     return (taskId: string): Task | undefined => {

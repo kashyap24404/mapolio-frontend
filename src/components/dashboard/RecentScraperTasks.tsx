@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { useSupabase } from '@/lib/supabase/hooks'
 import { useActiveOnVisible } from '@/lib/supabase/hooks/usePageVisibility'
-import { useRecentTasks } from '@/lib/swr/hooks/use-tasks'
+import { useRecentTasks } from '@/lib/tanstack-query/hooks/use-tasks'
 import type { ScrapingTask } from '@/stores/tasks-store'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -55,7 +55,7 @@ const formatDate = (dateString: string): string => {
 const RecentScraperTasks: React.FC = () => {
   const router = useRouter()
   const { user } = useSupabase()
-  const { data: recentTasks, error, isLoading, mutate: refreshTasks } = useRecentTasks(user?.id || '', 5)
+  const { data: recentTasks, error, isLoading, refetch: refreshTasks } = useRecentTasks(user?.id || '', 5)
   const { isActive, isVisible, justBecameVisible } = useActiveOnVisible({ pauseWhenHidden: true, resumeDelay: 2000 })
   const [isNavigating, setIsNavigating] = useState(false)
   

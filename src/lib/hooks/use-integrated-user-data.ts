@@ -8,7 +8,7 @@ import {
   useUserLoadingStates,
   useUserErrors
 } from './store-selectors';
-import { useUserStats, useTransactions, usePurchaseHistory } from '@/lib/swr/hooks/use-user';
+import { useUserStats, useTransactions, usePurchaseHistory } from '@/lib/tanstack-query/hooks/use-user';
 import type { UserStats, Transaction, PurchaseHistory } from '@/stores/user-store';
 
 /**
@@ -58,22 +58,22 @@ export function useIntegratedUserData(userId: string | null) {
     data: userStats,
     error: statsError,
     isLoading: statsLoading,
-    mutate: mutateStats
+    refetch: mutateStats
   } = useUserStats(userId || '');
 
   const {
-    data: transactions,
+    data: transactionsData,
     error: transactionsError,
     isLoading: transactionsLoading,
-    mutate: mutateTransactions
-  } = useTransactions(userId || '', 50);
+    refetch: refreshTransactions
+  } = useTransactions(userId || '');
 
   const {
-    data: purchaseHistory,
-    error: purchaseError,
-    isLoading: purchaseLoading,
-    mutate: mutatePurchase
-  } = usePurchaseHistory(userId || '', 20);
+    data: purchaseHistoryData,
+    error: purchaseHistoryError,
+    isLoading: purchaseHistoryLoading,
+    refetch: refreshPurchaseHistory
+  } = usePurchaseHistory(userId || '');
 
   // Update Zustand store when SWR data changes - using stable dependencies
   useEffect(() => {
@@ -88,42 +88,42 @@ export function useIntegratedUserData(userId: string | null) {
   }, [userStats, statsError, statsLoading, stableSetUserStats, stableSetError, stableSetLoading]);
 
   useEffect(() => {
-    if (transactions && !transactionsError) {
-      stableSetTransactions(transactions);
+    if (transactionsData && !transactionsError) {
+      stableSetTransactions(transactionsData);
       stableSetError('transactionsError', null);
     }
     if (transactionsError) {
       stableSetError('transactionsError', transactionsError.message);
     }
     stableSetLoading('isLoadingTransactions', transactionsLoading);
-  }, [transactions, transactionsError, transactionsLoading, stableSetTransactions, stableSetError, stableSetLoading]);
+  }, [transactionsData, transactionsError, transactionsLoading, stableSetTransactions, stableSetError, stableSetLoading]);
 
   useEffect(() => {
-    if (purchaseHistory && !purchaseError) {
-      stableSetPurchaseHistory(purchaseHistory);
+    if (purchaseHistoryData && !purchaseHistoryError) {
+      stableSetPurchaseHistory(purchaseHistoryData);
       stableSetError('purchaseHistoryError', null);
     }
-    if (purchaseError) {
-      stableSetError('purchaseHistoryError', purchaseError.message);
+    if (purchaseHistoryError) {
+      stableSetError('purchaseHistoryError', purchaseHistoryError.message);
     }
-    stableSetLoading('isLoadingPurchaseHistory', purchaseLoading);
-  }, [purchaseHistory, purchaseError, purchaseLoading, stableSetPurchaseHistory, stableSetError, stableSetLoading]);
+    stableSetLoading('isLoadingPurchaseHistory', purchaseHistoryLoading);
+  }, [purchaseHistoryData, purchaseHistoryError, purchaseHistoryLoading, stableSetPurchaseHistory, stableSetError, stableSetLoading]);
 
   // Refresh function that triggers all SWR mutations
   const refresh = useCallback(async () => {
     await Promise.all([
       mutateStats(),
-      mutateTransactions(),
-      mutatePurchase()
+      refreshTransactions(),
+      refreshPurchaseHistory()
     ]);
-  }, [mutateStats, mutateTransactions, mutatePurchase]);
+  }, [mutateStats, refreshTransactions, refreshPurchaseHistory]);
 
   // Return both SWR state and Zustand store state
   return {
     // Direct SWR data (for immediate use)
     userStats,
-    transactions,
-    purchaseHistory,
+    transactions: transactionsData,
+    purchaseHistory: purchaseHistoryData,
     
     // Zustand store state (for global access)
     store: {
@@ -139,18 +139,18 @@ export function useIntegratedUserData(userId: string | null) {
     },
     
     // Combined loading state
-    isLoading: statsLoading || transactionsLoading || purchaseLoading,
+    isLoading: statsLoading || transactionsLoading || purchaseHistoryLoading,
     
     // Combined error state
-    error: statsError?.message || transactionsError?.message || purchaseError?.message || null,
+    error: statsError?.message || transactionsError?.message || purchaseHistoryError?.message || null,
     
     // Refresh function
     refresh,
     
     // Individual mutators (for specific refreshes)
     mutateStats,
-    mutateTransactions,
-    mutatePurchase,
+    refreshTransactions,
+    refreshPurchaseHistory,
   };
 }
 

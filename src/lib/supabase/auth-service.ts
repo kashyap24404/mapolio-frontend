@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
-import { loadUserProfile } from '@/lib/supabase/user-service'
+import { loadUserProfile, clearProfileCache } from '@/lib/supabase/user-service'
 import { loadPricingPlan } from '@/lib/supabase/pricing-service'
 import { withTimeoutAndRetry } from '@/lib/services/base-service'
 import { User } from '@supabase/supabase-js'
@@ -126,6 +126,8 @@ export const signOut = async (
     setUser(null)
     setProfile(null)
     setCredits(null)
+    // Clear profile cache on sign out
+    clearProfileCache()
   } catch (error) {
     console.error('Error during sign out:', error)
   }

@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useTasksStore } from '@/stores/tasks-store';
-import { useTasks, useRecentTasks, useTask } from '@/lib/swr/hooks/use-tasks';
+import { useTasks, useRecentTasks, useTask } from '@/lib/tanstack-query/hooks/use-tasks';
 import { useTasksStoreActions } from './store-selectors';
 import type { ScrapingTask } from '@/stores/tasks-store';
 
@@ -36,10 +36,10 @@ export function useIntegratedTasksData(userId: string | null, filters?: any, pag
     data: tasksData,
     error: tasksError,
     isLoading: tasksLoading,
-    mutate: mutateTasks
-  } = useTasks(userId, filters || {}, pagination || { page: 1, limit: 20 });
+    refetch: refreshTasks
+  } = useTasks(userId || '');
 
-  // Update Zustand store when SWR data changes
+  // Update Zustand store when TanStack Query data changes
   useEffect(() => {
     if (tasksData?.tasks && !tasksError) {
       stableSetTasks(tasksData.tasks);
@@ -53,8 +53,8 @@ export function useIntegratedTasksData(userId: string | null, filters?: any, pag
 
   // Refresh function that triggers SWR mutations
   const refresh = useCallback(async () => {
-    await mutateTasks();
-  }, [mutateTasks]);
+    await refreshTasks();
+  }, [refreshTasks]);
 
   // Helper function to get task by ID
   const getTaskById = useCallback((taskId: string): ScrapingTask | undefined => {
@@ -82,7 +82,6 @@ export function useIntegratedTasksData(userId: string | null, filters?: any, pag
     // Utility functions
     getTaskById,
     refresh,
-    mutateTasks,
     
     // Pagination info for UI
     pagination: {
@@ -95,7 +94,7 @@ export function useIntegratedTasksData(userId: string | null, filters?: any, pag
 /**
  * Hook for fetching a specific task by ID with Zustand integration
  */
-export function useIntegratedTaskDetail(taskId: string | undefined) {
+export function useIntegratedTaskDetail(taskId: string | undefined, userId?: string | null) {
   const { updateTask } = useTasksStoreActions();
   const store = useTasksStore();
   
@@ -108,8 +107,8 @@ export function useIntegratedTaskDetail(taskId: string | undefined) {
     data: taskData,
     error: taskError,
     isLoading: taskLoading,
-    mutate: mutateTask
-  } = useTask(taskId);
+    refetch: refreshTask
+  } = useTask(taskId || '', userId || undefined);
 
   // Update store when task data changes
   useEffect(() => {
@@ -127,7 +126,7 @@ export function useIntegratedTaskDetail(taskId: string | undefined) {
     task: taskData || storeTask() || null,
     isLoading: taskLoading,
     error: taskError?.message || null,
-    refresh: mutateTask,
+    refresh: refreshTask,
   };
 }
 

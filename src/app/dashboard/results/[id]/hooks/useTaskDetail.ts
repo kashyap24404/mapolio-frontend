@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTasksData } from '@/contexts/TasksDataContext'
-import { useTask } from '@/lib/swr/hooks/use-tasks'
+import { useTask } from '@/lib/tanstack-query/hooks/use-tasks'
 import { TasksService } from '@/lib/data-services'
 import { Task } from '../types'
 
@@ -55,8 +55,8 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
     data: specificTask,
     error: specificTaskError,
     isLoading: specificTaskLoading,
-    mutate: mutateTask
-  } = useTask(taskId || undefined, user?.id);
+    refetch: refreshTask
+  } = useTask(taskId || '', user?.id || undefined);
   
   const [task, setTask] = useState<Task | null>(null)
   const [loading, setLoading] = useState(true)
@@ -80,8 +80,8 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
       return
     }
     
-    // PRIORITIZE the specifically fetched task from SWR, as it's the most up-to-date
-    // data source after a manual refresh via `mutateTask`.
+    // PRIORITIZE the specifically fetched task from TanStack Query, as it's the most up-to-date
+    // data source after a manual refresh via `refreshTask`.
     let foundTask = null;
     
     if (specificTask) {
@@ -146,14 +146,8 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
       setLoading(true);
       
       // Fetch fresh data directly from the service
-      let result;
-      if (user?.id) {
-        console.log('Fetching task with userId:', user.id);
-        result = await tasksService.fetchTaskById(taskId, user.id);
-      } else {
-        console.log('Fetching task without userId');
-        result = await tasksService.fetchTaskById(taskId);
-      }
+      console.log('Fetching task with ID:', taskId);
+      const result = await tasksService.fetchTaskById(taskId);
       
       console.log('Fetch result:', result);
       
@@ -183,10 +177,10 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
         console.log('Setting refreshed task:', refreshedTask);
         setTask(refreshedTask);
         
-        // Update the specific task SWR cache
-        if (mutateTask) {
-          console.log('Mutating specific task SWR cache with fresh data');
-          await mutateTask(result.data, { revalidate: false });
+        // Update the specific task TanStack Query cache
+        if (refreshTask) {
+          console.log('Refreshing TanStack Query cache with fresh data');
+          await refreshTask();
         }
         
         // Also invalidate the global tasks cache to ensure consistency
@@ -203,7 +197,22 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
       console.log('Setting loading to false');
       setLoading(false);
     }
-  }, [taskId, user?.id, mutateTask]);
+  }, [taskId, user?.id, refreshTask]);
+
+  // Auto-refresh every 30 seconds for running tasks
+  useEffect(() => {
+    if (!task || task.status !== 'running') {
+      return; // Only auto-refresh running tasks
+    }
+
+    const intervalId = setInterval(() => {
+      refreshHandler();
+    }, 30000); // 30 seconds
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [task, refreshHandler]);
 
   return {
     task,

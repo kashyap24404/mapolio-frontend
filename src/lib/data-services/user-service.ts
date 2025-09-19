@@ -283,4 +283,34 @@ export class UserService {
     await this.cache.invalidateByPrefix('transactions');
     await this.cache.invalidateByPrefix('purchase-history');
   }
+
+  async updateProfile(userId: string, updates: { display_name?: string; notification_settings?: Record<string, any> }): Promise<ServiceResponse<boolean>> {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      // Invalidate user caches
+      await this.invalidateUserCaches(userId);
+
+      return {
+        data: true,
+        error: null,
+        timestamp: Date.now(),
+      };
+    } catch (error) {
+      const serviceError = ErrorHandler.handle(error, 'updateProfile');
+      return {
+        data: false,
+        error: serviceError.message,
+        timestamp: Date.now(),
+      };
+    }
+  }
 }

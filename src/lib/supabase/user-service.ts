@@ -3,8 +3,22 @@ import { userService } from '@/lib/services'
 import { loadUserCredits } from '@/lib/supabase/credit-service'
 import { withTimeoutAndRetry } from '@/lib/services/base-service'
 
+// Simple cache to track loaded user profiles
+const profileCache = new Map<string, boolean>();
+
 export const loadUserProfile = async (userId: string, setProfile: Function, setCredits: Function) => {
-  console.log('Loading user profile for ID:', userId);
+  // Check if profile is already cached
+  if (profileCache.has(userId)) {
+    // Profile already loaded, skip redundant call
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Profile already loaded for ID:', userId, '- skipping redundant load');
+    }
+    return;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Loading user profile for ID:', userId);
+  }
   
   // Validate userId
   if (!userId) {
@@ -17,6 +31,9 @@ export const loadUserProfile = async (userId: string, setProfile: Function, setC
     
     if (!error && profile) {
       setProfile(profile);
+      // Mark profile as loaded in cache
+      profileCache.set(userId, true);
+      
       // Load credits after profile is loaded
       try {
         await loadUserCredits(userId, setCredits);
@@ -97,5 +114,18 @@ export const updateProfile = async (
   } catch (error) {
     console.error('Unexpected error updating profile:', error)
     return { success: false, error: { message: 'Failed to update profile' } }
+  }
+}
+
+// Function to clear profile cache (useful for sign out or force reload)
+export const clearProfileCache = (userId?: string) => {
+  if (userId) {
+    profileCache.delete(userId);
+  } else {
+    profileCache.clear();
+  }
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Profile cache cleared', userId ? `for user: ${userId}` : 'completely');
   }
 }

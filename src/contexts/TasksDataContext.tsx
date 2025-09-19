@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useMemo, useCallback, ReactNode } from 'react';
 import { useTasksStore } from '@/stores/tasks-store';
-import { useTasks, useRecentTasks } from '@/lib/swr/hooks/use-tasks';
+import { useTasks, useRecentTasks } from '@/lib/tanstack-query/hooks/use-tasks';
 import type { ScrapingTask } from '@/stores/tasks-store';
 
 interface TasksDataContextType {
@@ -32,14 +32,20 @@ export function TasksDataProvider({ children, userId }: TasksDataProviderProps) 
     data: tasksData, 
     error: tasksError, 
     isLoading: tasksLoading,
-    mutate: refreshTasks 
+    refetch: refreshTasksQuery 
   } = useTasks(shouldFetch ? userId : null);
   
   const { 
     data: recentTasksData, 
     error: recentTasksError, 
-    isLoading: recentTasksLoading 
+    isLoading: recentTasksLoading,
+    refetch: refreshRecentTasksQuery
   } = useRecentTasks(shouldFetch ? userId : null, 5);
+  
+  const refreshTasks = useCallback(() => {
+    refreshTasksQuery();
+    refreshRecentTasksQuery();
+  }, [refreshTasksQuery, refreshRecentTasksQuery]);
 
   // Use useMemo to prevent unnecessary re-renders and infinite loops
   const tasks = useMemo(() => {

@@ -60,10 +60,27 @@ export default function ResultsPage() {
     return new Date(dateString).toLocaleString()
   }, [])
 
+  interface LocationRule {
+    type: 'country' | 'state' | 'county' | 'city' | 'zip'
+    name?: string
+    state?: string
+    county?: string
+    zip_code?: string
+  }
+
   const formatLocation = useCallback((task: any) => {
     try {
-      // Use the transformed country field which now contains location info
-      return task.country || 'Multiple locations'
+      if (task.config?.location_rules) {
+        const locationRules = task.config.location_rules
+        // Extract meaningful location info from the location rules
+        if (locationRules.include && locationRules.include.length > 0) {
+          return locationRules.include.map((rule: LocationRule) => rule.name || rule.zip_code).join(', ')
+        }
+        if (locationRules.base && locationRules.base.length > 0) {
+          return locationRules.base.map((rule: LocationRule) => rule.name || rule.zip_code).join(', ')
+        }
+      }
+      return task.config?.search_query || task.country || 'Multiple locations'
     } catch {
       return 'Unknown location'
     }

@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useScrapeStore } from '@/stores/scrape-store';
-import { useCategories, useCountries, useDataTypes, useRatings } from '@/lib/swr/hooks/use-scrape-data';
+import { useCategories, useCountries, useDataTypes, useRatings } from '@/lib/tanstack-query/hooks/use-scrape-data';
 import { useScrapeStoreActions } from './store-selectors';
 import type { Category, Country, DataType, Rating } from '@/stores/scrape-store';
 
@@ -50,68 +50,68 @@ export function useIntegratedScrapeData() {
     setScrapeLoading(key, loading);
   }, [setScrapeLoading]);
   
-  // SWR hooks for data fetching
+  // TanStack Query hooks for data fetching
   const {
-    data: categories,
+    data: categoriesData,
     error: categoriesError,
     isLoading: categoriesLoading,
-    mutate: mutateCategories
+    refetch: refreshCategories
   } = useCategories();
 
   const {
-    data: countries,
+    data: countriesData,
     error: countriesError,
     isLoading: countriesLoading,
-    mutate: mutateCountries
+    refetch: refreshCountries
   } = useCountries();
 
   const {
-    data: dataTypes,
+    data: dataTypesData,
     error: dataTypesError,
     isLoading: dataTypesLoading,
-    mutate: mutateDataTypes
+    refetch: refreshDataTypes
   } = useDataTypes();
 
   const {
     data: ratings,
     error: ratingsError,
     isLoading: ratingsLoading,
-    mutate: mutateRatings
+    refetch: refreshRatings
   } = useRatings();
 
   // Update Zustand store when SWR data changes - with stable dependencies
   useEffect(() => {
-    if (categories && !categoriesError) {
-      stableSetCategories(categories);
+    if (categoriesData && !categoriesError) {
+      stableSetCategories(categoriesData);
       stableSetError('categoriesError', null);
     }
     if (categoriesError) {
       stableSetError('categoriesError', categoriesError.message);
     }
     stableSetLoading('isLoadingCategories', categoriesLoading);
-  }, [categories, categoriesError, categoriesLoading, stableSetCategories, stableSetError, stableSetLoading]);
+  }, [categoriesData, categoriesError, categoriesLoading, stableSetCategories, stableSetError, stableSetLoading]);
 
   useEffect(() => {
-    if (countries && !countriesError) {
-      stableSetCountries(countries);
+    if (countriesData && !countriesError) {
+      stableSetCountries(countriesData);
       stableSetError('countriesError', null);
     }
     if (countriesError) {
       stableSetError('countriesError', countriesError.message);
     }
     stableSetLoading('isLoadingCountries', countriesLoading);
-  }, [countries, countriesError, countriesLoading, stableSetCountries, stableSetError, stableSetLoading]);
+  }, [countriesData, countriesError, countriesLoading, stableSetCountries, stableSetError, stableSetLoading]);
 
   useEffect(() => {
-    if (dataTypes && !dataTypesError) {
-      stableSetDataTypes(dataTypes);
+    if (dataTypesData && !dataTypesError) {
+      stableSetDataTypes(dataTypesData);
       stableSetError('dataTypesError', null);
     }
     if (dataTypesError) {
       stableSetError('dataTypesError', dataTypesError.message);
     }
     stableSetLoading('isLoadingDataTypes', dataTypesLoading);
-  }, [dataTypes, dataTypesError, dataTypesLoading, stableSetDataTypes, stableSetError, stableSetLoading]);
+  }, [dataTypesData, dataTypesError, dataTypesLoading, stableSetDataTypes, stableSetError, stableSetLoading]);
 
   useEffect(() => {
     if (ratings && !ratingsError) {
@@ -127,19 +127,19 @@ export function useIntegratedScrapeData() {
   // Refresh function that triggers all SWR mutations - simplified
   const refresh = useCallback(async () => {
     await Promise.all([
-      mutateCategories(),
-      mutateCountries(),
-      mutateDataTypes(),
-      mutateRatings()
+      refreshCategories(),
+      refreshCountries(),
+      refreshDataTypes(),
+      refreshRatings()
     ]);
-  }, [mutateCategories, mutateCountries, mutateDataTypes, mutateRatings]);
+  }, [refreshCategories, refreshCountries, refreshDataTypes, refreshRatings]);
 
   // Return object without complex memoization
   return {
     // Direct SWR data (for immediate use)
-    categories: categories || [],
-    countries: countries || [],
-    dataTypes: dataTypes || [],
+    categories: categoriesData || [],
+    countries: countriesData || [],
+    dataTypes: dataTypesData || [],
     ratings: ratings || [],
     
     // Zustand store state (for global access)

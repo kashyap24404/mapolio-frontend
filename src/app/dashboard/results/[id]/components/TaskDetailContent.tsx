@@ -28,18 +28,13 @@ export function TaskDetailContent({ task, loading, onRefresh, onBack, onDownload
       
       <Card className="overflow-hidden border-border shadow-md mb-6">
         <CardContent className="space-y-6 p-6">
-          <TaskProgressSection task={task} />
+          <TaskProgressSection task={task} onRefresh={onRefresh} loading={loading} />
           <TaskErrorSection task={task} />
           <TaskCompletionSection task={task} />
           {task.status === 'completed' && <DownloadSection task={task} onDownload={onDownload} />}
           <TaskDetailsSection task={task} />
           <ConfigurationDetailsSection task={task} />
-          <ActionButtonsSection 
-            task={task} 
-            loading={loading} 
-            onRefresh={onRefresh} 
-            onDownload={onDownload} 
-          />
+          <ActionButtonsSection task={task} />
         </CardContent>
       </Card>
     </>
