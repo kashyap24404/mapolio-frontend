@@ -65,25 +65,34 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
   // When the taskId changes or tasks are updated, get the task from the specific fetch or global context
   useEffect(() => {
     // Add a guard clause: Do not proceed if the user object is not available or taskId is missing
-    if (!user || !taskId) {
+    if (!user) {
+      // User not authenticated, set error and stop loading
       setTask(null);
+      setError('User not authenticated');
       setLoading(false);
-      if (!user) {
-        setError('User not authenticated');
-      }
       return;
     }
     
-    // If both context and specific task are still loading, wait
-    if (tasksLoading && specificTaskLoading) {
-      setLoading(true)
-      return
+    if (!taskId) {
+      // TaskId is not yet available, keep loading state until we have a taskId
+      setLoading(true);
+      return;
     }
+    
+    // Derive unified loading state from all sources
+    const isLoading = tasksLoading || specificTaskLoading;
+    
+    // If still loading, set loading state and return early
+    if (isLoading) {
+      setLoading(true);
+      return;
+    }
+    
+    // All data sources have completed loading - make atomic decision
+    let foundTask = null;
     
     // PRIORITIZE the specifically fetched task from TanStack Query, as it's the most up-to-date
     // data source after a manual refresh via `refreshTask`.
-    let foundTask = null;
-    
     if (specificTask) {
       // Convert ScrapingTask to Task format for compatibility
       foundTask = {
@@ -110,24 +119,18 @@ export function useTaskDetail(user: User | null, taskId: string | null) {
       }
     }
     
+    // Atomic state update: set all related states synchronously
     if (foundTask) {
-      setTask(foundTask)
-      setError(null)
-    } else if (!tasksLoading && !specificTaskLoading) {
-      // Only set error if both sources have finished loading
-      const errorMsg = specificTaskError?.message || 'Task not found';
-      setError(errorMsg)
+      setTask(foundTask);
+      setError(null);
+    } else {
+      // Only set error if no task was found - consider both specific task error and tasks context error
+      const errorMsg = specificTaskError?.message || tasksError || 'Task not found';
+      setError(errorMsg);
     }
-    
-    setLoading(tasksLoading || specificTaskLoading)
-  }, [taskId, user, tasks, tasksLoading, getTaskById, specificTask, specificTaskLoading, specificTaskError])
+    setLoading(false);
+  }, [taskId, user, tasks, tasksLoading, tasksError, getTaskById, specificTask, specificTaskLoading, specificTaskError])
 
-  // Pass through any error from the tasks context
-  useEffect(() => {
-    if (tasksError && !specificTaskError) {
-      setError(tasksError)
-    }
-  }, [tasksError, specificTaskError])
 
   // Create refresh handler that fetches fresh data and updates global cache
   const refreshHandler = useCallback(async () => {

@@ -135,7 +135,7 @@ export class ScrapeDataService {
       const { data, error } = await supabase
         .from('scraper_data_types')
         .select('id, label, restricted_to_plans, credits_increase')
-        .order('label');
+        .order('created_at' , { ascending: true });
 
       if (error) throw error;
 

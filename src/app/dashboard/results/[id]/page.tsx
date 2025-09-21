@@ -21,6 +21,8 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter()
   const { user, profile, loading: authLoading } = useSupabase()
   const [taskId, setTaskId] = useState<string | null>(null)
+  const [paramsResolved, setParamsResolved] = useState(false)
+  const [showEmptyState, setShowEmptyState] = useState(false)
   
   // Use the refactored useTaskDetail hook that now uses the global context
   const { task, loading, error, refresh } = useTaskDetail(user, taskId)
@@ -33,6 +35,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     const unwrapParams = async () => {
       const unwrappedParams = await params
       setTaskId(unwrappedParams.id)
+      setParamsResolved(true)
     }
     
     unwrapParams()
@@ -61,6 +64,18 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     }
   }, [authLoading, user, router])
 
+  // Debounce the EmptyState to prevent flickering
+  useEffect(() => {
+    if (!task && !loading && paramsResolved) {
+      const timer = setTimeout(() => {
+        setShowEmptyState(true)
+      }, 100) // 100ms delay to prevent flickering
+      return () => clearTimeout(timer)
+    } else {
+      setShowEmptyState(false)
+    }
+  }, [task, loading, paramsResolved])
+
   // Always render the page content with appropriate loading states
   return (
     <div className="min-h-screen bg-background">
@@ -72,26 +87,26 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         <main className="flex-1">
           <div className="py-8 px-6">
             <div className="max-w-4xl mx-auto">
-              {/* Show loading skeleton */}
-              {loading && !task && (
+              {/* Show loading skeleton when params are not resolved or when loading */}
+              {(!paramsResolved || loading) && (
                 <TaskDetailSkeleton />
               )}
               
-              {error && (
+              {error && paramsResolved && !loading && (
                 <ErrorState error={error} />
               )}
 
-              {!task && !loading && (
+              {showEmptyState && (
                 <EmptyState />
               )}
 
-              {task && (
+              {task && paramsResolved && (
                 <DataFetchErrorBoundary
                   onError={(error, errorInfo) => {
                     console.error('Task detail error:', error, errorInfo)
                   }}
                 >
-                  <TaskDetailContent 
+                  <TaskDetailContent
                     task={task}
                     loading={loading}
                     onRefresh={refresh} // Revert to using the original refresh function
