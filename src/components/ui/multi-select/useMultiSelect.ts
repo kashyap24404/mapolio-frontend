@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react'
 export interface MultiSelectOption {
   id: string
   label: string | React.ReactNode
+  chipLabel?: string
 }
 
 interface UseMultiSelectProps {

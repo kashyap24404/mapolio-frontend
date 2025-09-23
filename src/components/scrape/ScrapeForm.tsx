@@ -51,7 +51,8 @@ export default function ScrapeForm({
   const dataTypes = rawDataTypes.map(dt => ({
     id: dt.id,
     label: dt.label,
-    credits_increase: dt.credits_increase || 0
+    credits_increase: dt.credits_increase || 0,
+    description: dt.description || ''
   }))
   
   const ratings = rawRatings.map(rating => ({

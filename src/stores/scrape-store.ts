@@ -18,6 +18,7 @@ export interface DataType {
   label: string;
   restricted_to_plans: string[];
   credits_increase?: number;
+  description?: string;
 }
 
 export interface Rating {

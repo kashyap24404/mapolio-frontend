@@ -134,17 +134,24 @@ export class ScrapeDataService {
     try {
       const { data, error } = await supabase
         .from('scraper_data_types')
-        .select('id, label, restricted_to_plans, credits_increase')
+        .select('id, label, restricted_to_plans, credits_increase, description')
         .order('created_at' , { ascending: true });
 
       if (error) throw error;
+
+      // Debug log to see raw data from Supabase
+      console.log('Raw data from Supabase scraper_data_types:', data);
 
       const dataTypes = (data || []).map(item => ({
         id: item.id,
         label: item.label,
         restricted_to_plans: item.restricted_to_plans || [],
-        credits_increase: item.credits_increase || 0
+        credits_increase: item.credits_increase || 0,
+        description: item.description || ''
       }));
+
+      // Debug log to see processed data types
+      console.log('Processed data types with descriptions:', dataTypes);
       
       await this.cache.set(cacheKey, dataTypes, {
         ttl: 30 * 60 * 1000, // 30 minutes

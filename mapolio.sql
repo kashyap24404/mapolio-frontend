@@ -79,14 +79,17 @@ CREATE TABLE public.scraper_countries (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT scraper_countries_pkey PRIMARY KEY (id)
 );
-CREATE TABLE public.scraper_data_types (
-  id text NOT NULL,
-  label text NOT NULL,
-  restricted_to_plans ARRAY NOT NULL DEFAULT '{}'::text[],
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
+create table public.scraper_data_types (
+  id text not null,
+  label text not null,
+  restricted_to_plans text[] not null default '{}'::text[],
+  created_at timestamp with time zone not null default now(),
   credits_increase numeric null,
-  CONSTRAINT scraper_data_types_pkey PRIMARY KEY (id)
-);
+  description text null,
+  display_order integer null,
+  constraint scraper_data_types_pkey primary key (id)
+) TABLESPACE pg_default;
+
 CREATE TABLE public.scraper_ratings (
   id text NOT NULL,
   value text NOT NULL,

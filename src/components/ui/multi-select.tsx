@@ -198,7 +198,7 @@ export const MultiSelect = memo<MultiSelectProps>(function MultiSelect({
                           )}
                           onClick={() => handleToggleOption(option.id)}
                         >
-                          <div className="truncate flex-1 text-left">{option.label}</div>
+                          <div className={`flex-1 text-left ${typeof option.label === 'string' ? 'truncate' : ''}`}>{option.label}</div>
                           {isSelected && (
                             <Check className="h-4 w-4 text-primary shrink-0 ml-2" />
                           )}

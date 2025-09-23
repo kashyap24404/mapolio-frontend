@@ -20,6 +20,7 @@ interface DataFieldsSectionProps {
 // Extend MultiSelectOption to include credit increase info
 interface DataTypeOption extends MultiSelectOption {
   credits_increase?: number
+  description?: string
 }
 
 const DataFieldsSection = memo<DataFieldsSectionProps>(function DataFieldsSection({
@@ -37,6 +38,11 @@ const DataFieldsSection = memo<DataFieldsSectionProps>(function DataFieldsSectio
 
   // Render the component content
   const renderContent = () => {
+    // Debug: Log data types to check if descriptions are present
+    React.useEffect(() => {
+      console.log('DataFieldsSection dataTypes:', dataTypes)
+    }, [dataTypes])
+    
     // Don't render on server to prevent hydration mismatches
     if (!isClient) {
       return (
@@ -85,7 +91,12 @@ const DataFieldsSection = memo<DataFieldsSectionProps>(function DataFieldsSectio
       id: dt.id,
       label: dt.credits_increase ? (
         <div className="flex items-center justify-between w-full">
-          <span>{dt.label || `Option ${dt.id}`}</span>
+          <div className="flex flex-col">
+            <span>{dt.label || `Option ${dt.id}`}</span>
+            {dt.description && (
+              <span className="text-xs text-muted-foreground">{dt.description}</span>
+            )}
+          </div>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -101,9 +112,15 @@ const DataFieldsSection = memo<DataFieldsSectionProps>(function DataFieldsSectio
           </TooltipProvider>
         </div>
       ) : (
-        dt.label || `Option ${dt.id}`
+        <div className="flex flex-col">
+          <span>{dt.label}</span>
+          {dt.description && (
+            <span className="text-xs text-muted-foreground">{dt.description}</span>
+          )}
+        </div>
       ),
-      credits_increase: dt.credits_increase
+      credits_increase: dt.credits_increase,
+      description: dt.description
     }))
     
     // Count premium fields

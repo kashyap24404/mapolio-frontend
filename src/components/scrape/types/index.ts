@@ -13,6 +13,7 @@ export interface DataType {
   id: string
   label: string
   credits_increase?: number
+  description?: string
 }
 
 export interface Rating {
