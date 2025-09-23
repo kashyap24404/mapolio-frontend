@@ -73,14 +73,25 @@ export const useLocationSelection = (
   }, [locationData])
 
   // Get selection state for a node
-  const getNodeSelectionState = useCallback((node: LocationNode): SelectionState => {
-    const isSelected = isPathSelected(node.path)
-    const hasChildren = hasSelectedChildren(node)
+  // Check if all children are selected for a node
+  const areAllChildrenSelected = useCallback((node: LocationNode): boolean => {
+    if (!node.hasChildren) return false
     
-    if (isSelected) return 'selected'
-    if (hasChildren) return 'partial'
+    const childPaths = getAllChildPaths(node)
+    if (childPaths.length === 0) return false
+    
+    return childPaths.every(childPath => isPathSelected(childPath))
+  }, [getAllChildPaths, isPathSelected])
+
+  const getNodeSelectionState = useCallback((node: LocationNode): SelectionState => {
+    const isDirectlySelected = isPathSelected(node.path)
+    const hasChildrenSelected = hasSelectedChildren(node)
+    const allChildrenSelected = areAllChildrenSelected(node)
+    
+    if (isDirectlySelected || allChildrenSelected) return 'selected'
+    if (hasChildrenSelected) return 'partial'
     return 'unselected'
-  }, [isPathSelected, hasSelectedChildren])
+  }, [isPathSelected, hasSelectedChildren, areAllChildrenSelected])
 
   // Toggle selection for a node
   const toggleNodeSelection = useCallback((node: LocationNode) => {
@@ -88,7 +99,7 @@ export const useLocationSelection = (
     
     if (node.level === 3 || !node.hasChildren) {
       // Leaf node (zip code or city with single zip) - toggle individual selection
-      const newPaths = currentState === 'selected' 
+      const newPaths = currentState === 'selected'
         ? selectedPaths.filter(path => !arraysEqual(path, node.path))
         : [...selectedPaths.filter(path => !arraysEqual(path, node.path)), node.path]
       onLocationChange(newPaths)
@@ -112,7 +123,15 @@ export const useLocationSelection = (
       } else {
         // Deselect this node and all children
         const childPaths = getAllChildPaths(node)
-        const pathsToRemove = [...childPaths, node.path]
+        
+        // Create a list of all paths to remove - all descendants plus the node itself
+        const pathsToRemove = [...childPaths]
+        
+        // Only include the node path if it exists in selectedPaths
+        if (selectedPaths.some(path => arraysEqual(path, node.path))) {
+          pathsToRemove.push(node.path)
+        }
+        
         const newPaths = selectedPaths.filter(path =>
           !pathsToRemove.some(removePath => arraysEqual(path, removePath))
         )
