@@ -113,7 +113,7 @@ export const MultiSelect = memo<MultiSelectProps>(function MultiSelect({
                 key={option.id}
                 className="inline-flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded text-xs"
               >
-                {typeof option.label === 'string' ? option.label : `Option ${option.id}`}
+                {option.chipLabel || (typeof option.label === 'string' ? option.label : `Option ${option.id}`)}
                 <button
                   type="button"
                   onClick={(e) => {

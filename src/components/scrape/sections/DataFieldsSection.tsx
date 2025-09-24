@@ -119,6 +119,7 @@ const DataFieldsSection = memo<DataFieldsSectionProps>(function DataFieldsSectio
           )}
         </div>
       ),
+      chipLabel: dt.label || `Option ${dt.id}`, // Provide plain text label for chips
       credits_increase: dt.credits_increase,
       description: dt.description
     }))
