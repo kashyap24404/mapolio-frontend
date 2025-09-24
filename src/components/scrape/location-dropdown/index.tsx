@@ -90,23 +90,24 @@ export default function HierarchicalLocationDropdown({
   const handleBulkSelection = useCallback(async (type: BulkSelectionType) => {
     if (!getAllPathsAtLevel) return
 
-    const actionLabels = {
-      'select-all': 'Selecting all ZIP codes',
-      'states-only': 'Selecting all states',
-      'counties-only': 'Selecting all counties', 
-      'cities-only': 'Selecting all cities',
-      'zips-only': 'Selecting all ZIP codes',
-      'clear-all': 'Clearing selections'
+    let label: string;
+    switch (type) {
+      case 'select-all':
+        label = 'Selecting all ZIP codes';
+        break;
+      case 'clear-all':
+        label = 'Clearing selections';
+        break;
+      default:
+        label = 'Processing selection';
     }
-
-    const label = actionLabels[type] || 'Processing selection'
     setProcessingType(label)
     setIsProcessingBulk(true)
     setProcessingProgress(0)
 
     try {
       // For large operations, simulate chunked processing
-      if (type === 'select-all' || type === 'zips-only') {
+      if (type === 'select-all') {
         const allPaths = getAllPathsAtLevel(3)
         
         if (allPaths.length > 10000) {
@@ -130,15 +131,8 @@ export default function HierarchicalLocationDropdown({
           // Process immediately for smaller datasets
           setTimeout(() => onLocationChange(allPaths), 500)
         }
-      } else {
-        // Other operations are typically smaller
-        const level = type === 'states-only' ? 0 : type === 'counties-only' ? 1 : type === 'cities-only' ? 2 : -1
-        
-        if (level >= 0) {
-          setTimeout(() => onLocationChange(getAllPathsAtLevel(level)), 300)
-        } else if (type === 'clear-all') {
-          setTimeout(() => onLocationChange([]), 200)
-        }
+      } else if (type === 'clear-all') {
+        setTimeout(() => onLocationChange([]), 200)
       }
     } catch (error) {
       // Silent error handling for user experience

@@ -1,34 +1,35 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo, useEffect, useRef } from 'react'
 import { LocationNode, SelectionState, BulkSelectionType } from './types'
 
 export const useLocationSelection = (
-  selectedPaths: string[][], 
+  selectedPaths: string[][],
   onLocationChange: (paths: string[][]) => void,
   getAllPathsAtLevel?: (level: number) => string[][],
   locationData?: any
 ) => {
-  // Utility function to compare arrays
-  const arraysEqual = (a: string[], b: string[]): boolean => {
-    return a.length === b.length && a.every((val, i) => val === b[i])
-  }
+  const workerRef = useRef<Worker | null>(null)
+  // Optimized: Use Set for fast path lookups
+  const selectedPathsSet = useMemo(() =>
+    new Set(selectedPaths.map(path => path.join('|'))),
+  [selectedPaths])
 
-  // Check if a path is selected
+  // Optimized utility function to compare arrays using Set
   const isPathSelected = useCallback((path: string[]): boolean => {
-    return selectedPaths.some(selectedPath => 
-      selectedPath.length === path.length && 
-      selectedPath.every((part, index) => part === path[index])
-    )
-  }, [selectedPaths])
+    return selectedPathsSet.has(path.join('|'))
+  }, [selectedPathsSet])
 
-  // Check if any child paths are selected
+  // Optimized: Check if any child paths are selected
   const hasSelectedChildren = useCallback((node: LocationNode): boolean => {
-    return selectedPaths.some(selectedPath => {
-      return selectedPath.length > node.path.length &&
-             selectedPath.slice(0, node.path.length).every((part, i) => part === node.path[i])
-    })
-  }, [selectedPaths])
+    const pathPrefix = node.path.join('|')
+    for (const selectedPath of selectedPathsSet) {
+      if (selectedPath.startsWith(pathPrefix) && selectedPath !== pathPrefix) {
+        return true
+      }
+    }
+    return false
+  }, [selectedPathsSet])
 
-  // Get all child paths for a given node
+  // Get all child paths for a given node (this function is already efficient)
   const getAllChildPaths = useCallback((node: LocationNode): string[][] => {
     if (!locationData?.data) return []
     
@@ -72,8 +73,7 @@ export const useLocationSelection = (
     return childPaths
   }, [locationData])
 
-  // Get selection state for a node
-  // Check if all children are selected for a node
+  // Optimized: Check if all children are selected for a node
   const areAllChildrenSelected = useCallback((node: LocationNode): boolean => {
     if (!node.hasChildren) return false
     
@@ -93,52 +93,62 @@ export const useLocationSelection = (
     return 'unselected'
   }, [isPathSelected, hasSelectedChildren, areAllChildrenSelected])
 
-  // Toggle selection for a node
+  // Optimized: Toggle selection for a node
   const toggleNodeSelection = useCallback((node: LocationNode) => {
     const currentState = getNodeSelectionState(node)
     
     if (node.level === 3 || !node.hasChildren) {
-      // Leaf node (zip code or city with single zip) - toggle individual selection
-      const newPaths = currentState === 'selected'
-        ? selectedPaths.filter(path => !arraysEqual(path, node.path))
-        : [...selectedPaths.filter(path => !arraysEqual(path, node.path)), node.path]
+      // Leaf node - toggle individual selection using Set for efficiency
+      const pathKey = node.path.join('|')
+      const newSelectedSet = new Set(selectedPathsSet)
+      
+      if (currentState === 'selected') {
+        newSelectedSet.delete(pathKey)
+      } else {
+        newSelectedSet.add(pathKey)
+      }
+      
+      // Convert Set back to array format for callback
+      const newPaths = Array.from(newSelectedSet).map(pathStr => pathStr.split('|'))
       onLocationChange(newPaths)
     } else {
       // Parent node - smart selection including all children
       const shouldSelect = currentState !== 'selected'
       
       if (shouldSelect) {
-        // Select all children (zip codes only) - don't include parent node
+        // Select all children (zip codes only)
         const childPaths = getAllChildPaths(node)
-        const newPaths = [...selectedPaths]
+        const newSelectedSet = new Set(selectedPathsSet)
         
-        // Remove any existing child selections to avoid duplicates
-        const filteredPaths = newPaths.filter(path =>
-          !childPaths.some(childPath => arraysEqual(path, childPath))
-        )
+        // Add all child paths
+        childPaths.forEach(childPath => {
+          newSelectedSet.add(childPath.join('|'))
+        })
         
-        // Add only the child paths (zip codes)
-        filteredPaths.push(...childPaths)
-        onLocationChange(filteredPaths)
+        // Convert Set back to array format for callback
+        const newPaths = Array.from(newSelectedSet).map(pathStr => pathStr.split('|'))
+        onLocationChange(newPaths)
       } else {
         // Deselect this node and all children
         const childPaths = getAllChildPaths(node)
+        const pathsToRemove = childPaths.map(path => path.join('|'))
         
-        // Create a list of all paths to remove - all descendants plus the node itself
-        const pathsToRemove = [...childPaths]
-        
-        // Only include the node path if it exists in selectedPaths
-        if (selectedPaths.some(path => arraysEqual(path, node.path))) {
-          pathsToRemove.push(node.path)
+        // Also remove the node path if it exists
+        const nodePathKey = node.path.join('|')
+        if (selectedPathsSet.has(nodePathKey)) {
+          pathsToRemove.push(nodePathKey)
         }
         
-        const newPaths = selectedPaths.filter(path =>
-          !pathsToRemove.some(removePath => arraysEqual(path, removePath))
-        )
+        // Create new Set without the paths to remove
+        const newSelectedSet = new Set(selectedPathsSet)
+        pathsToRemove.forEach(pathKey => newSelectedSet.delete(pathKey))
+        
+        // Convert Set back to array format for callback
+        const newPaths = Array.from(newSelectedSet).map(pathStr => pathStr.split('|'))
         onLocationChange(newPaths)
       }
     }
-  }, [selectedPaths, onLocationChange, getNodeSelectionState, getAllChildPaths])
+  }, [selectedPathsSet, onLocationChange, getNodeSelectionState, getAllChildPaths])
 
   // Select all states
   const selectAllStates = useCallback((allStates: LocationNode[]) => {
@@ -151,47 +161,52 @@ export const useLocationSelection = (
     onLocationChange([])
   }, [onLocationChange])
 
-  // Execute bulk selection operations
+  // Initialize Web Worker
+  useEffect(() => {
+    if (typeof Worker !== 'undefined') {
+      workerRef.current = new Worker('/workers/bulk-selection-worker.js')
+      
+      workerRef.current.onmessage = (e) => {
+        if (e.data.success) {
+          onLocationChange(e.data.data)
+        }
+      }
+      
+      return () => {
+        workerRef.current?.terminate()
+      }
+    }
+  }, [onLocationChange])
+
+  // Execute bulk selection operations with Web Worker optimization
   const executeBulkSelection = useCallback((type: BulkSelectionType) => {
     if (!getAllPathsAtLevel) return
 
-    switch (type) {
-      case 'select-all':
-        // Select all ZIP codes (deepest level)
-        onLocationChange(getAllPathsAtLevel(3))
-        break
-        
-      case 'states-only':
-        // Select all state-level paths
-        onLocationChange(getAllPathsAtLevel(0))
-        break
-        
-      case 'counties-only':
-        // Select all county-level paths
-        onLocationChange(getAllPathsAtLevel(1))
-        break
-        
-      case 'cities-only':
-        // Select all city-level paths
-        onLocationChange(getAllPathsAtLevel(2))
-        break
-        
-      case 'zips-only':
-        // Select all ZIP code-level paths
-        onLocationChange(getAllPathsAtLevel(3))
-        break
-        
-      case 'clear-all':
-        clearAllSelections()
-        break
-        
-      default:
-        break
+    // Use Web Worker for large operations to prevent UI freezing
+    if (type === 'select-all' && workerRef.current) {
+      workerRef.current.postMessage({ type, getAllPathsAtLevel })
+    } else {
+      // For clear-all and other operations, handle in main thread
+      setTimeout(() => {
+        switch (type) {
+          case 'select-all':
+            // Fallback if Web Worker is not available
+            onLocationChange(getAllPathsAtLevel(3))
+            break
+            
+          case 'clear-all':
+            clearAllSelections()
+            break
+            
+          default:
+            break
+        }
+      }, 0)
     }
   }, [getAllPathsAtLevel, onLocationChange, clearAllSelections])
 
   return {
-    arraysEqual,
+    arraysEqual: (a: string[], b: string[]) => a.join('|') === b.join('|'),
     isPathSelected,
     hasSelectedChildren,
     getAllChildPaths,

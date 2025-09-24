@@ -37,12 +37,8 @@ export interface LocationDropdownProps {
 
 export type SelectionState = 'selected' | 'unselected' | 'partial'
 
-export type BulkSelectionType = 
+export type BulkSelectionType =
   | 'select-all'     // Everything (all ZIP codes)
-  | 'states-only'    // State level only
-  | 'counties-only'  // County level only  
-  | 'cities-only'    // City level only
-  | 'zips-only'      // ZIP code level only
   | 'clear-all'      // Clear everything
 
 export interface BulkAction {
